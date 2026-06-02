@@ -1,1 +1,0 @@
-{"version":3,"file":"send-connection-request.dto.js","sourceRoot":"","sources":["../../../src/connections/dto/send-connection-request.dto.ts"],"names":[],"mappings":";;;;;;;;;;;;AAAA,qDAAuD;AACvD,6CAA8C;AAE9C,MAAa,wBAAwB;CAQpC;AARD,4DAQC;AADC;IANC,IAAA,qBAAW,EAAC;QACX,OAAO,EAAE,oBAAoB;QAC7B,WAAW,EAAE,4BAA4B;KAC1C,CAAC;IACD,IAAA,0BAAQ,GAAE;IACV,IAAA,4BAAU,GAAE;;+DACS"}
