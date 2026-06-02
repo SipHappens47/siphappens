@@ -1,0 +1,293 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum ExperienceLevel {
+  Curious
+  Social
+  Serious
+}
+
+model user {
+  id                        String          @id @default(uuid())
+  email                     String          @unique
+  password                  String
+  name                      String
+  profilephoto              String?
+  bio                       String?
+  experiencelevel           ExperienceLevel @default(Curious)
+  ageverified               Boolean         @default(false)
+  ageverificationtimestamp  DateTime?
+  isofficial                Boolean         @default(false)  // true = SipHappens official system account
+  createdat                 DateTime        @default(now())
+  
+  pours                     pour[]
+  files                     file[]
+  connectionsInitiated      connection[] @relation("ConnectionInitiator")
+  connectionsReceived       connection[] @relation("ConnectionReceiver")
+  cheers                    cheer[]
+  radar                     radar[]
+  userbadges                userbadge[]
+  distilleryfollows         distilleryfollower[]
+  owneddistillery           distillery[]
+  
+  @@index([name])
+  @@index([email])
+}
+
+model distillery {
+  id             String   @id @default(uuid())
+  name           String
+  country        String?
+  region         String?
+  createdat      DateTime @default(now())
+  
+  // Distillery Profile fields
+  logo           String?  // URL to logo image
+  heroimage      String?  // URL to hero/cover image
+  bio            String?  // Short story/description
+  verified       Boolean  @default(false)
+  ispremium      Boolean  @default(false)  // Paid tier (R700/month or R7000/year)
+  websiteurl     String?
+  latitude       Float?   // For map pins
+  longitude      Float?
+  followerscount Int      @default(0)
+  owneruserid    String?  // User account that owns/manages this distillery
+  spirittypes    String?  // Comma-separated list of spirit types (Whisky, Gin, Rum, etc.)
+  isclaimed      Boolean  @default(false)  // true = user-created/claimed, false = seeded
+  
+  owner          user?    @relation(fields: [owneruserid], references: [id], onDelete: SetNull)
+  spirits        spirit[]
+  pours          pour[]   // Distillery-created pours
+  followers      distilleryfollower[]
+  insights       distilleryinsight[]
+  
+  @@index([name])
+  @@index([country])
+  @@index([region])
+  @@index([ispremium])
+  @@index([verified])
+  @@index([owneruserid])
+}
+
+model distilleryfollower {
+  id           String     @id @default(uuid())
+  userid       String
+  distilleryid String
+  createdat    DateTime   @default(now())
+  
+  user         user       @relation(fields: [userid], references: [id], onDelete: Cascade)
+  distillery   distillery @relation(fields: [distilleryid], references: [id], onDelete: Cascade)
+  
+  @@unique([userid, distilleryid])
+  @@index([userid])
+  @@index([distilleryid])
+}
+
+model distilleryinsight {
+  id                 String     @id @default(uuid())
+  distilleryid       String
+  spiritid           String     @unique
+  howwecreated       String?    // Premium: "How we created this spirit"
+  whatmakesitspecial String?    // Premium: "What makes it special"
+  tastingnotes       String?    // Premium: Official tasting notes
+  createdat          DateTime   @default(now())
+  updatedat          DateTime   @updatedAt
+  
+  distillery         distillery @relation(fields: [distilleryid], references: [id], onDelete: Cascade)
+  spirit             spirit     @relation(fields: [spiritid], references: [id], onDelete: Cascade)
+  
+  @@index([distilleryid])
+  @@index([spiritid])
+}
+
+model spirit {
+  id                     String      @id @default(uuid())
+  name                   String
+  distilleryid           String?
+  category               String?
+  style                  String?
+  abv                    Decimal?
+  region                 String?
+  bottleimage            String?
+  officialtastingnotes   String?     // Official tasting notes from distillery
+  isusercreated          Boolean     @default(false) // true = created by user via pour, false = seeded/distillery-added
+  createdat              DateTime    @default(now())
+  
+  distillery   distillery? @relation(fields: [distilleryid], references: [id], onDelete: Cascade)
+  pours        pour[]
+  flavortags   spiritflavortag[]
+  radar        radar[]
+  insight      distilleryinsight?  // Premium distillery insights
+  
+  @@index([distilleryid])
+  @@index([name])
+  @@index([category])
+  @@index([style])
+  @@index([region])
+}
+
+model pour {
+  id               String   @id @default(uuid())
+  userid           String
+  spiritid         String
+  whyithit         String
+  isshared         Boolean  @default(false)
+  image            String?
+  createdat        DateTime @default(now())
+  updatedat        DateTime @updatedAt
+  
+  // Distillery-created pours
+  isdistillerypost Boolean  @default(false)
+  distilleryid     String?
+  
+  user             user               @relation(fields: [userid], references: [id], onDelete: Cascade)
+  spirit           spirit             @relation(fields: [spiritid], references: [id], onDelete: Cascade)
+  distillery       distillery?        @relation(fields: [distilleryid], references: [id], onDelete: SetNull)
+  imageFile        file?              @relation(fields: [image], references: [id], onDelete: SetNull)
+  flavortags       pourflavortag[]
+  cheers           cheer[]
+  
+  @@index([userid])
+  @@index([spiritid])
+  @@index([distilleryid])
+  @@index([createdat])
+  @@index([image])
+  @@index([whyithit])
+  @@index([isshared])
+  @@index([isdistillerypost])
+}
+
+model flavortag {
+  id   String @id @default(uuid())
+  name String @unique
+  
+  spirits spiritflavortag[]
+  pours   pourflavortag[]
+  
+  @@index([name])
+}
+
+model spiritflavortag {
+  spiritid    String
+  flavortagid String
+  
+  spirit    spirit    @relation(fields: [spiritid], references: [id], onDelete: Cascade)
+  flavortag flavortag @relation(fields: [flavortagid], references: [id], onDelete: Cascade)
+  
+  @@id([spiritid, flavortagid])
+  @@index([flavortagid])
+}
+
+model pourflavortag {
+  pourid      String
+  flavortagid String
+  
+  pour      pour      @relation(fields: [pourid], references: [id], onDelete: Cascade)
+  flavortag flavortag @relation(fields: [flavortagid], references: [id], onDelete: Cascade)
+  
+  @@id([pourid, flavortagid])
+  @@index([flavortagid])
+}
+
+model file {
+  id                 String   @id @default(uuid())
+  userid             String
+  cloudstoragepath   String
+  ispublic           Boolean  @default(false)
+  filename           String
+  filesize           Int
+  mimetype           String
+  createdat          DateTime @default(now())
+  
+  user  user   @relation(fields: [userid], references: [id], onDelete: Cascade)
+  pours pour[]
+  
+  @@index([userid])
+}
+
+model connection {
+  id          String   @id @default(uuid())
+  initiatorid String
+  receiverid  String
+  status      ConnectionStatus @default(Pending)
+  ismuted     Boolean  @default(false)  // true = receiver has muted initiator's posts from their feed
+  createdat   DateTime @default(now())
+  acceptedat  DateTime?
+  
+  initiator user @relation("ConnectionInitiator", fields: [initiatorid], references: [id], onDelete: Cascade)
+  receiver  user @relation("ConnectionReceiver", fields: [receiverid], references: [id], onDelete: Cascade)
+  
+  @@unique([initiatorid, receiverid])
+  @@index([initiatorid])
+  @@index([receiverid])
+  @@index([status])
+}
+
+model cheer {
+  id        String   @id @default(uuid())
+  userid    String
+  pourid    String
+  createdat DateTime @default(now())
+  
+  user user @relation(fields: [userid], references: [id], onDelete: Cascade)
+  pour pour @relation(fields: [pourid], references: [id], onDelete: Cascade)
+  
+  @@unique([userid, pourid])
+  @@index([pourid])
+  @@index([userid])
+}
+
+model radar {
+  id        String   @id @default(uuid())
+  userid    String
+  spiritid  String
+  createdat DateTime @default(now())
+  
+  user   user   @relation(fields: [userid], references: [id], onDelete: Cascade)
+  spirit spirit @relation(fields: [spiritid], references: [id], onDelete: Cascade)
+  
+  @@unique([userid, spiritid])
+  @@index([userid])
+  @@index([spiritid])
+}
+
+enum ConnectionStatus {
+  Pending
+  Accepted
+  Rejected
+}
+
+model badge {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  description  String
+  imageurl     String
+  criteriajson Json
+  createdat    DateTime @default(now())
+  updatedat    DateTime @updatedAt
+  
+  userbadges   userbadge[]
+  
+  @@index([name])
+}
+
+model userbadge {
+  id         String   @id @default(uuid())
+  userid     String
+  badgeid    String
+  unlockedat DateTime @default(now())
+  tier       String?
+  
+  user  user  @relation(fields: [userid], references: [id], onDelete: Cascade)
+  badge badge @relation(fields: [badgeid], references: [id], onDelete: Cascade)
+  
+  @@unique([userid, badgeid, tier])
+  @@index([userid])
+  @@index([badgeid])
+}

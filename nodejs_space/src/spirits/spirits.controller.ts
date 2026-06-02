@@ -1,0 +1,75 @@
+import { Controller, Post, Get, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { SpiritsService } from './spirits.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RecognizeBottleDto } from './dto/recognize-bottle.dto';
+import { CreateSpiritDto } from './dto/create-spirit.dto';
+import { UpdateSpiritDto } from './dto/update-spirit.dto';
+import { CreateDistilleryDto } from './dto/create-distillery.dto';
+
+@ApiTags('Spirits')
+@Controller('api/spirits')
+export class SpiritsController {
+  constructor(private spiritsService: SpiritsService) {}
+
+  @Post('recognize')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Recognize spirit from bottle image using AI' })
+  @ApiResponse({ status: 200, description: 'Bottle analyzed successfully' })
+  async recognizeBottle(@Body() dto: RecognizeBottleDto) {
+    return this.spiritsService.recognizeBottle(dto);
+  }
+
+  @Get('search-images')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Search for bottle images' })
+  @ApiResponse({ status: 200, description: 'Image URLs returned' })
+  @ApiQuery({ name: 'query', required: true, description: 'Search query for bottle images' })
+  async searchBottleImages(@Query('query') query: string) {
+    return this.spiritsService.searchBottleImages(query);
+  }
+
+  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Search spirits by name or distillery' })
+  @ApiQuery({ name: 'q', required: true })
+  @ApiResponse({ status: 200, description: 'Search results retrieved' })
+  async searchSpirits(@Query('q') query: string) {
+    return this.spiritsService.searchSpirits(query);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new spirit' })
+  @ApiResponse({ status: 201, description: 'Spirit created successfully' })
+  async createSpirit(@Body() dto: CreateSpiritDto) {
+    return this.spiritsService.createSpirit(dto);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get spirit details by ID' })
+  @ApiResponse({ status: 200, description: 'Spirit details retrieved' })
+  @ApiResponse({ status: 404, description: 'Spirit not found' })
+  async getSpirit(@Param('id') id: string) {
+    return this.spiritsService.getSpirit(id);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update spirit details' })
+  @ApiResponse({ status: 200, description: 'Spirit updated successfully' })
+  @ApiResponse({ status: 404, description: 'Spirit not found' })
+  async updateSpirit(@Param('id') id: string, @Body() dto: UpdateSpiritDto) {
+    return this.spiritsService.updateSpirit(id, dto);
+  }
+}
+
+// Old DistilleriesController moved to src/distilleries/distilleries.controller.ts
+// This has been replaced by the full Distillery Profiles feature

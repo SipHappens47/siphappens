@@ -1,0 +1,97 @@
+{
+  "expo": {
+    "name": "SipHappens",
+    "slug": "abacusai-mobile-apps",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "abacusai1772133303",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5F1ED"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "SipHappens needs camera access to scan bottle labels and identify spirits.",
+        "NSPhotoLibraryUsageDescription": "SipHappens needs photo library access to select bottle images for your pour entries.",
+        "NSLocationWhenInUseUsageDescription": "SipHappens needs your location to show nearby distilleries on the map."
+      },
+      "bundleIdentifier": "com.abacusai.siphappens.t1772133303",
+      "buildNumber": "2",
+      "config": {
+        "googleMapsApiKey": "AIzaSyDEXAMPLE_KEY_REPLACE_WITH_YOUR_KEY"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A1628",
+        "foregroundImage": "./assets/icon.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "package": "com.abacusai.siphappens.t1772133303",
+      "versionCode": 2,
+      "userInterfaceStyle": "dark",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDEXAMPLE_KEY_REPLACE_WITH_YOUR_KEY"
+        }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "abacusai1772133303",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SipHappens to access your camera to scan bottle labels."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow SipHappens to access your photos to select bottle images."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a52132e3-7b24-4c1b-9315-46625e580b8a"
+      },
+      "apiUrl": "http://10.0.0.3:3000/"
+    },
+    "owner": "abacus.ai"
+  }
+}

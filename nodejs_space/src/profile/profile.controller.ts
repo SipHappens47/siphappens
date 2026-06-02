@@ -1,0 +1,42 @@
+import { Controller, Get, Put, Body, UseGuards, Request, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ProfileService } from './profile.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePhotoDto } from './dto/update-photo.dto';
+
+@ApiTags('Profile')
+@Controller('api/profile')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+export class ProfileController {
+  constructor(private profileService: ProfileService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
+  async getProfile(@Request() req: any) {
+    return this.profileService.getProfile(req.user.userId);
+  }
+
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Get public user profile by ID' })
+  @ApiResponse({ status: 200, description: 'Public profile retrieved successfully' })
+  async getPublicProfile(@Param('userId') userId: string) {
+    return this.profileService.getPublicProfile(userId);
+  }
+
+  @Put()
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  async updateProfile(@Request() req: any, @Body() dto: UpdateProfileDto) {
+    return this.profileService.updateProfile(req.user.userId, dto);
+  }
+
+  @Put('photo')
+  @ApiOperation({ summary: 'Update profile photo' })
+  @ApiResponse({ status: 200, description: 'Profile photo updated successfully' })
+  async updatePhoto(@Request() req: any, @Body() dto: UpdatePhotoDto) {
+    return this.profileService.updatePhoto(req.user.userId, dto);
+  }
+}
