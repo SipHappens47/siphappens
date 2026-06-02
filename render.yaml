@@ -5,7 +5,7 @@ services:
     plan: free
     region: frankfurt
     rootDir: nodejs_space
-    buildCommand: corepack enable && corepack prepare yarn@4.12.0 --activate && yarn install --immutable && yarn build
+    buildCommand: corepack enable && yarn install --immutable && yarn build
     startCommand: yarn start:prod
     envVars:
       - key: NODE_VERSION
