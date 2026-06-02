@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: siphappens-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    rootDir: nodejs_space
+    buildCommand: corepack enable && corepack prepare yarn@4.12.0 --activate && yarn install --immutable && yarn build
+    startCommand: yarn start:prod
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Stops corepack from hanging on a download confirmation prompt mid-build
+      - key: COREPACK_ENABLE_DOWNLOAD_PROMPT
+        value: "0"
+      # Secrets: set these in the Render dashboard (not stored in git)
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # Optional — only needed for image uploads + bottle-scan features
+      - key: AWS_PROFILE
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_BUCKET_NAME
+        sync: false
+      - key: AWS_FOLDER_PREFIX
+        sync: false
+      - key: ABACUSAI_API_KEY
+        sync: false
