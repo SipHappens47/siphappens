@@ -2,7 +2,7 @@ services:
   - type: web
     name: siphappens-api
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     rootDir: nodejs_space
     buildCommand: corepack enable && corepack prepare yarn@4.12.0 --activate && yarn install --immutable && yarn build
