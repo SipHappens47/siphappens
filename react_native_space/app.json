@@ -90,7 +90,7 @@
       "eas": {
         "projectId": "a52132e3-7b24-4c1b-9315-46625e580b8a"
       },
-      "apiUrl": "http://10.0.0.3:3000/"
+      "apiUrl": "https://siphappens.onrender.com/"
     },
     "owner": "abacus.ai"
   }

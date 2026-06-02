@@ -6,9 +6,9 @@ import Constants from 'expo-constants';
 import { AuthResponse, User, Spirit, Pour, FlavorTag, Distillery, SpiritRecognitionResponse, FileUploadResponse, FileUrlResponse, Connection, FellowSipper, BarPour, RadarEntry, UniversalSearchResults, Badge, TasteSummary } from '../types';
 import { DistilleryProfile, DistilleryDiscoverData, DistilleryPour, DistillerySpirit, DistilleryAnalytics } from '../types/distillery';
 
-// Local backend (NestJS on this PC). Use the PC's LAN IP so a phone on the
-// same Wi-Fi can reach it via Expo Go. For web/emulator, localhost also works.
-const API_URL = 'http://10.0.0.3:3000/';
+// Cloud backend (NestJS on Render). Reachable from any device, no PC required.
+// For local development against the PC, swap to 'http://10.0.0.3:3000/'.
+const API_URL = 'https://siphappens.onrender.com/';
 
 console.log('='.repeat(60));
 console.log('[ApiService] USING HARDCODED PRODUCTION API URL');
