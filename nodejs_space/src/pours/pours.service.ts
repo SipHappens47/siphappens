@@ -256,6 +256,7 @@ export class PoursService {
   private formatPourResponse(pour: any) {
     return {
       id: pour.id,
+      userId: pour.userid,
       whyItHit: pour.whyithit,
       isShared: pour.isshared,
       image: pour.image,
