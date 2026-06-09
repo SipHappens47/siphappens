@@ -30,43 +30,43 @@ export class SpiritsService {
         base64Image = image.split(',')[1];
       }
 
-      const response = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        this.logger.error('GEMINI_API_KEY is not set');
+        throw new Error('Bottle recognition is not configured');
+      }
+      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+      const prompt =
+        'You are identifying a bottle of spirits from a photo. Respond ONLY with JSON of the form ' +
+        '{"matches":[{"spiritName":"","distilleryName":"","category":"","style":"","abv":0,"region":"","confidence":0.0}]}. ' +
+        'Read the label and identify the spirit. If you are confident, return exactly 1 match; if unsure, return up to 3 ' +
+        'possible matches ranked by a confidence score between 0 and 1. ' +
+        'category must be one of: Whiskey, Vodka, Rum, Gin, Tequila, Mezcal, Brandy, Liqueur. ' +
+        'abv is the percentage as a number (e.g. 40). ' +
+        'If the image is not a spirit bottle or you cannot identify it, return {"matches":[]}.';
+
+      // Google Gemini (generativelanguage API). Provider isolated to this method so it can be swapped.
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.ABACUSAI_API_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: 'Analyze this spirit bottle image and extract the following information. Return your response in JSON format with the following structure: {"matches": [{"spiritName": "", "distilleryName": "", "category": "", "style": "", "abv": 0, "region": "", "confidence": 0.95}]}. If you can identify the spirit with high confidence, return 1 match. If uncertain, return up to 3 possible matches with different confidence scores. Categories should be: Whisky, Bourbon, Scotch, Rum, Vodka, Gin, Tequila, Cognac, Brandy, or Other.',
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: `data:image/jpeg;base64,${base64Image}`,
-                  },
-                },
-              ],
-            },
+          contents: [
+            { parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64Image } }] },
           ],
-          response_format: { type: 'json_object' },
-          stream: false,
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error('LLM API error:', errorText);
+        this.logger.error('Gemini API error:', errorText);
         throw new Error('Failed to analyze bottle image');
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
+      const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!content) {
         throw new Error('No response from AI');
