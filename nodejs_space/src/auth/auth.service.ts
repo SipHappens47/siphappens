@@ -103,6 +103,10 @@ export class AuthService {
       }
     }
 
+    // Distillery powers require admin verification; a freshly claimed distillery is
+    // unverified, so the account behaves as a normal user until an admin approves it.
+    distillery = distillery && distillery.verified ? distillery : null;
+
     // Generate token with distillery information if applicable
     const token = this.generateToken(user.id, user.email, distillery?.id);
 
@@ -146,8 +150,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if user owns a distillery (owneddistillery is an array, get first element)
-    const distillery = user.owneddistillery?.[0];
+    // Distillery powers require an admin-verified claim; unverified owners act as normal users.
+    const owned = user.owneddistillery?.[0];
+    const distillery = owned && owned.verified ? owned : null;
 
     // Generate token with distillery information if applicable
     const token = this.generateToken(user.id, user.email, distillery?.id);
@@ -206,7 +211,8 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    const distillery = user.owneddistillery?.[0];
+    const owned = user.owneddistillery?.[0];
+    const distillery = owned && owned.verified ? owned : null;
 
     return {
       id: user.id,
