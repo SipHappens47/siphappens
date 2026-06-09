@@ -137,55 +137,58 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
         </View>
       </View>
 
-      {/* Pour Image */}
-      {pourImageUrl && (
-        <Image
-          source={{ uri: pourImageUrl }}
-          style={styles.pourImage}
-          resizeMode="cover"
-        />
-      )}
+      {/* Tap anywhere on the post to open it */}
+      <Pressable onPress={() => onViewDetails(pour?.id ?? '')}>
+        {pourImageUrl && (
+          <Image
+            source={{ uri: pourImageUrl }}
+            style={styles.pourImage}
+            resizeMode="cover"
+          />
+        )}
 
-      {/* Spirit Details */}
-      <Card.Content style={styles.content}>
-        <View style={styles.spiritRow}>
-          {bottleImageUrl && (
-            <Image
-              source={{ uri: bottleImageUrl }}
-              style={styles.bottleImage}
-              resizeMode="contain"
-            />
-          )}
-          <View style={styles.spiritInfo}>
-            <Text style={styles.spiritName}>{pour?.spirit?.name ?? 'Unknown Spirit'}</Text>
-            <View style={styles.metaRow}>
-              {pour?.spirit?.category && (
-                <Text style={styles.category}>{pour.spirit.category}</Text>
-              )}
-              {pour?.spirit?.abv && (
-                <Text style={styles.abv}>{pour.spirit.abv}% ABV</Text>
-              )}
+        <Card.Content style={styles.content}>
+          <View style={styles.spiritRow}>
+            {bottleImageUrl && (
+              <Image
+                source={{ uri: bottleImageUrl }}
+                style={styles.bottleImage}
+                resizeMode="contain"
+              />
+            )}
+            <View style={styles.spiritInfo}>
+              <Text style={styles.spiritName}>{pour?.spirit?.name ?? 'Unknown Spirit'}</Text>
+              <View style={styles.metaRow}>
+                {pour?.spirit?.category && (
+                  <Text style={styles.category}>{pour.spirit.category}</Text>
+                )}
+                {pour?.spirit?.abv && (
+                  <Text style={styles.abv}>{pour.spirit.abv}% ABV</Text>
+                )}
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Why It Hit */}
-        {pour?.whyItHit && (
-          <Text style={styles.whyItHit}>{pour.whyItHit}</Text>
-        )}
+          {/* Why It Hit */}
+          {pour?.whyItHit && (
+            <Text style={styles.whyItHit}>{pour.whyItHit}</Text>
+          )}
 
-        {/* Flavor Tags */}
-        {(pour?.flavorTags?.length ?? 0) > 0 && (
-          <View style={styles.tagsContainer}>
-            {(pour?.flavorTags ?? []).map((tag) => (
-              <Chip key={tag?.id} style={styles.tag} textStyle={styles.tagText}>
-                {tag?.name}
-              </Chip>
-            ))}
-          </View>
-        )}
+          {/* Flavor Tags */}
+          {(pour?.flavorTags?.length ?? 0) > 0 && (
+            <View style={styles.tagsContainer}>
+              {(pour?.flavorTags ?? []).map((tag) => (
+                <Chip key={tag?.id} style={styles.tag} textStyle={styles.tagText}>
+                  {tag?.name}
+                </Chip>
+              ))}
+            </View>
+          )}
+        </Card.Content>
+      </Pressable>
 
-        {/* Action Buttons */}
+      {/* Action Buttons */}
+      <Card.Content>
         <View style={styles.actionsRow}>
           <Pressable onPress={handleCheerPress} style={styles.actionButton}>
             <MaterialCommunityIcons
@@ -203,8 +206,8 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
             </Text>
           </Pressable>
 
-          <Pressable 
-            onPress={() => onAddToRadar(pour?.spirit?.id ?? '')} 
+          <Pressable
+            onPress={() => onAddToRadar(pour?.spirit?.id ?? '')}
             style={styles.actionButton}
           >
             <MaterialCommunityIcons
@@ -213,17 +216,6 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
               color={Colors.textMuted}
             />
             <Text style={styles.actionText}>Add to Radar</Text>
-          </Pressable>
-
-          <Pressable 
-            onPress={() => onViewDetails(pour?.id ?? '')} 
-            style={styles.actionButton}
-          >
-            <MaterialCommunityIcons
-              name="dots-vertical"
-              size={20}
-              color={Colors.textMuted}
-            />
           </Pressable>
         </View>
       </Card.Content>
