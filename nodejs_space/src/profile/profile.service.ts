@@ -34,6 +34,13 @@ export class ProfileService {
       throw new Error('User not found');
     }
 
+    const [poursCount, connectionsCount] = await Promise.all([
+      this.prisma.pour.count({ where: { userid: userId } }),
+      this.prisma.connection.count({
+        where: { status: 'Accepted', OR: [{ initiatorid: userId }, { receiverid: userId }] },
+      }),
+    ]);
+
     let displayName = user.name;
     let displayBio = user.bio;
     let displayPhoto = user.profilephoto;
@@ -55,6 +62,8 @@ export class ProfileService {
       experienceLevel: user.experiencelevel,
       ageVerified: user.ageverified,
       createdAt: user.createdat,
+      poursCount,
+      connectionsCount,
     };
   }
 
@@ -144,7 +153,14 @@ export class ProfileService {
       }
 
       console.log('[ProfileService] User found:', user.name);
-      
+
+      const [poursCount, connectionsCount] = await Promise.all([
+        this.prisma.pour.count({ where: { userid: userId, isshared: true } }),
+        this.prisma.connection.count({
+          where: { status: 'Accepted', OR: [{ initiatorid: userId }, { receiverid: userId }] },
+        }),
+      ]);
+
       return {
         id: user.id,
         name: user.name,
@@ -153,6 +169,8 @@ export class ProfileService {
         experienceLevel: user.experiencelevel,
         isOfficial: user.isofficial ?? false,
         createdAt: user.createdat,
+        poursCount,
+        connectionsCount,
       };
     } catch (error) {
       console.error('[ProfileService] Error getting public profile:', error);
