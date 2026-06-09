@@ -30,12 +30,12 @@ export class SpiritsService {
         base64Image = image.split(',')[1];
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = process.env.GEMINI_API_KEY?.trim();
       if (!apiKey) {
         this.logger.error('GEMINI_API_KEY is not set');
         throw new Error('Bottle recognition is not configured');
       }
-      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const model = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
 
       const prompt =
         'You are identifying a bottle of spirits from a photo. Respond ONLY with JSON of the form ' +
@@ -48,24 +48,37 @@ export class SpiritsService {
 
       // Google Gemini (generativelanguage API). Provider isolated to this method so it can be swapped.
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            { parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64Image } }] },
-          ],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
-        }),
+      const reqBody = JSON.stringify({
+        contents: [
+          { parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64Image } }] },
+        ],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
       });
 
-      if (!response.ok) {
+      // Gemini occasionally returns 503 (overloaded) or 429 (rate); retry a few times with backoff.
+      const maxAttempts = 4;
+      let data: any;
+      for (let attempt = 1; ; attempt++) {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody,
+        });
+        if (response.ok) {
+          data = await response.json();
+          break;
+        }
         const errorText = await response.text();
+        const retryable = response.status === 503 || response.status === 429 || response.status >= 500;
+        if (retryable && attempt < maxAttempts) {
+          this.logger.warn(`Gemini ${response.status}, retrying (${attempt}/${maxAttempts})`);
+          await new Promise((r) => setTimeout(r, attempt * 1500));
+          continue;
+        }
         this.logger.error('Gemini API error:', errorText);
         throw new Error('Failed to analyze bottle image');
       }
 
-      const data = await response.json();
       const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!content) {
