@@ -33,6 +33,8 @@ export default function ProfileScreen() {
   const [bio, setBio] = useState('');
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | undefined>();
   const [experienceLevel, setExperienceLevel] = useState<'Curious' | 'Social' | 'Serious'>('Curious');
+  const [poursCount, setPoursCount] = useState(0);
+  const [connectionsCount, setConnectionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [tasteSummary, setTasteSummary] = useState<TasteSummary | null>(null);
@@ -64,6 +66,8 @@ export default function ProfileScreen() {
       setName(profile?.name ?? '');
       setBio(profile?.bio ?? '');
       setExperienceLevel((profile?.experienceLevel as any) ?? 'Curious');
+      setPoursCount(profile?.poursCount ?? 0);
+      setConnectionsCount(profile?.connectionsCount ?? 0);
       
       if (profile?.profilePhoto) {
         const url = await uploadService.getImageUrl(profile.profilePhoto, 'view');
@@ -251,6 +255,19 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Stats: Pours + Friends */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{poursCount}</Text>
+            <Text style={styles.statLabel}>Pours</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <Pressable style={styles.statItem} onPress={() => router.push('/connections')}>
+            <Text style={styles.statNumber}>{connectionsCount}</Text>
+            <Text style={styles.statLabel}>Friends</Text>
+          </Pressable>
+        </View>
+
         {/* Profile Info Section */}
         <View style={styles.infoSection}>
           <View style={styles.infoItem}>
@@ -389,6 +406,34 @@ const styles = StyleSheet.create({
   },
   avatar: {
     backgroundColor: Colors.primary,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: Colors.divider,
   },
   infoSection: {
     backgroundColor: Colors.surface,

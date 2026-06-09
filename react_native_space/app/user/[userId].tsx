@@ -318,6 +318,19 @@ export default function PublicUserProfileScreen() {
           )}
         </View>
 
+        {/* Stats: Pours + Friends */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{profile?.poursCount ?? 0}</Text>
+            <Text style={styles.statLabel}>Pours</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{profile?.connectionsCount ?? 0}</Text>
+            <Text style={styles.statLabel}>Friends</Text>
+          </View>
+        </View>
+
         {/* Connection Button + Mute Toggle */}
         <View style={styles.connectionButtonContainer}>
           {isOfficial ? (
@@ -499,6 +512,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#D4A017',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: Colors.divider,
   },
   connectionButtonContainer: {
     paddingHorizontal: spacing.xl,

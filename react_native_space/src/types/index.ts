@@ -7,6 +7,8 @@ export interface User {
   experienceLevel?: 'Curious' | 'Social' | 'Serious';
   ageVerified: boolean;
   createdAt: string;
+  poursCount?: number;
+  connectionsCount?: number;
   distilleryId?: string;
   isDistilleryAccount?: boolean;
   distillery?: {
