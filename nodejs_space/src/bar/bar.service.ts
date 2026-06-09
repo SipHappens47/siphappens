@@ -45,13 +45,10 @@ export class BarService {
       isshared: true,
     };
 
-    // If user has connections, prioritize their pours
-    // If no connections, show all public pours (excluding own pours)
+    // Show the user's own shared pours alongside their Fellow Sippers'.
+    // With no connections yet, show all shared pours (including their own).
     if (fellowSipperIds.length > 0) {
-      where.userid = { in: fellowSipperIds };
-    } else {
-      // Show pours from all users except current user
-      where.userid = { not: userId };
+      where.userid = { in: [...fellowSipperIds, userId] };
     }
 
     if (filters.category) {
