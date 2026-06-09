@@ -88,10 +88,10 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a52132e3-7b24-4c1b-9315-46625e580b8a"
+        "projectId": "00068069-769a-47ca-81af-a9c4cafa696f"
       },
       "apiUrl": "https://siphappens.onrender.com/"
     },
-    "owner": "abacus.ai"
+    "owner": "siphappens"
   }
 }
