@@ -38,7 +38,7 @@ export class UploadService {
   async completeUpload(userId: string, dto: CompleteUploadDto) {
     const { cloud_storage_path, fileName, mimeType, fileSize } = dto;
 
-    const isPublic = cloud_storage_path.includes('/public/uploads/');
+    const isPublic = cloud_storage_path.includes('public/uploads/');
 
     const file = await this.prisma.file.create({
       data: {
@@ -87,7 +87,7 @@ export class UploadService {
 
     await s3.completeMultipartUpload(cloud_storage_path, uploadId, parts);
 
-    const isPublic = cloud_storage_path.includes('/public/uploads/');
+    const isPublic = cloud_storage_path.includes('public/uploads/');
 
     const file = await this.prisma.file.create({
       data: {
