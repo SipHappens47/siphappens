@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiService } from '../../src/services/api';
 import { uploadService } from '../../src/services/upload';
+import { useAuth } from '../../src/context/AuthContext';
 import { Pour } from '../../src/types';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
@@ -12,6 +13,7 @@ import { spacing } from '../../src/constants/theme';
 export default function PourDetailsScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [pour, setPour] = useState<Pour | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,17 +129,21 @@ export default function PourDetailsScreen() {
           onPress={() => router.back()}
         />
         <View style={styles.headerActions}>
-          <IconButton
-            icon="pencil"
-            size={24}
-            onPress={() => router.push(`/pour/edit/${pour?.id ?? ''}`)}
-          />
-          <IconButton
-            icon="delete"
-            size={24}
-            iconColor={Colors.error}
-            onPress={handleDelete}
-          />
+          {pour?.userId && user?.id === pour.userId && (
+            <>
+              <IconButton
+                icon="pencil"
+                size={24}
+                onPress={() => router.push(`/pour/edit/${pour?.id ?? ''}`)}
+              />
+              <IconButton
+                icon="delete"
+                size={24}
+                iconColor={Colors.error}
+                onPress={handleDelete}
+              />
+            </>
+          )}
         </View>
       </View>
 

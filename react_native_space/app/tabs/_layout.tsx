@@ -1,15 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Pressable, Platform, View } from 'react-native';
+import { Pressable, Platform, View, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../src/constants/colors';
 import { useAuth } from '../../src/context/AuthContext';
+import { uploadService } from '../../src/services/upload';
 
 export default function TabsLayout() {
   const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+
+  // Resolve the current user's profile photo (stored as a file id) to a URL for the header avatar.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (user?.profilePhoto) {
+        try {
+          const url = await uploadService.getImageUrl(user.profilePhoto, 'view');
+          if (active) setAvatarUrl(url || null);
+        } catch {
+          if (active) setAvatarUrl(null);
+        }
+      } else if (active) {
+        setAvatarUrl(null);
+      }
+    })();
+    return () => { active = false; };
+  }, [user?.profilePhoto]);
 
   return (
     <Tabs
@@ -51,11 +71,18 @@ export default function TabsLayout() {
               />
             </Pressable>
             <Pressable onPress={() => router.push('/profile')}>
-              <MaterialCommunityIcons
-                name="account-circle"
-                size={28}
-                color={Colors.textSecondary}
-              />
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: Colors.elevated }}
+                />
+              ) : (
+                <MaterialCommunityIcons
+                  name="account-circle"
+                  size={28}
+                  color={Colors.textSecondary}
+                />
+              )}
             </Pressable>
           </View>
         ),
