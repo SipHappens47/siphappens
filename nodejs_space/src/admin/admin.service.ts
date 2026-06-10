@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AdminService {
-  private readonly ADMIN_EMAIL = 'john@doe.com'; // Llewellyn's admin account
+  private readonly ADMIN_EMAIL = 'official@siphappens.com'; // SipHappens brand account = admin
 
   constructor(private prisma: PrismaService) {}
 
