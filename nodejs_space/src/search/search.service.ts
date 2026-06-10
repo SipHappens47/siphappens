@@ -47,6 +47,8 @@ export class SearchService {
       where: {
         AND: [
           { id: { not: currentUserId } },
+          // Verified distillery owners appear in results as their distillery, not as a user
+          { owneddistillery: { none: { verified: true } } },
           {
             OR: [
               { name: { contains: searchTerm, mode: 'insensitive' } },

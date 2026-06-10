@@ -16,6 +16,7 @@ export class ConnectionsService {
         AND: [
           { id: { not: currentUserId } }, // Exclude current user
           { isofficial: false }, // Exclude official account from connection search
+          { owneddistillery: { none: { verified: true } } }, // Verified distillery owners appear as their distillery, not as sippers
           {
             OR: [
               {
