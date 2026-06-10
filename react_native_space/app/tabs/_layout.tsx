@@ -6,11 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../src/constants/colors';
 import { useAuth } from '../../src/context/AuthContext';
 import { uploadService } from '../../src/services/upload';
+import { ADMIN_EMAIL } from '../../src/constants/admin';
 
 export default function TabsLayout() {
   const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Resolve the current user's profile photo (stored as a file id) to a URL for the header avatar.
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -112,6 +114,17 @@ export default function TabsLayout() {
           title: 'My Shelf',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="book-open-variant" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="verify"
+        options={{
+          title: 'Verify',
+          // Hidden for everyone except the SipHappens admin account
+          href: isAdmin ? '/tabs/verify' : null,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="check-decagram" size={size} color={color} />
           ),
         }}
       />
