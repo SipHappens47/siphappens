@@ -96,10 +96,30 @@ export class SpiritsService {
   async createSpirit(dto: CreateSpiritDto) {
     const { flavorTagIds, ...spiritData } = dto;
 
+    // Dedupe: if this spirit already exists for the same distillery, reuse it
+    // instead of creating a duplicate entry.
+    if (spiritData.name?.trim() && spiritData.distilleryId) {
+      const existing = await this.prisma.spirit.findFirst({
+        where: {
+          distilleryid: spiritData.distilleryId,
+          name: { equals: spiritData.name.trim(), mode: 'insensitive' },
+        },
+        include: {
+          distillery: true,
+          flavortags: { include: { flavortag: true } },
+        },
+      });
+      if (existing) {
+        return this.formatSpiritResponse(existing);
+      }
+    }
+
     const spirit = await this.prisma.spirit.create({
       data: {
         name: spiritData.name?.trim(),
-        isusercreated: true, // User-created spirit - NEVER appears on distillery shelf
+        // First time this spirit enters the catalog: list it on the distillery's
+        // shelf too (shelf shows isusercreated=false spirits only).
+        isusercreated: false,
         ...(spiritData.distilleryId && { distilleryid: spiritData.distilleryId }),
         ...(spiritData.category && { category: spiritData.category.trim() }),
         ...(spiritData.style && { style: spiritData.style.trim() }),
