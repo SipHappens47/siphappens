@@ -35,6 +35,7 @@ export default function ProfileScreen() {
   const [experienceLevel, setExperienceLevel] = useState<'Curious' | 'Social' | 'Serious'>('Curious');
   const [poursCount, setPoursCount] = useState(0);
   const [connectionsCount, setConnectionsCount] = useState(0);
+  const [cheersCount, setCheersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [tasteSummary, setTasteSummary] = useState<TasteSummary | null>(null);
@@ -68,6 +69,7 @@ export default function ProfileScreen() {
       setExperienceLevel((profile?.experienceLevel as any) ?? 'Curious');
       setPoursCount(profile?.poursCount ?? 0);
       setConnectionsCount(profile?.connectionsCount ?? 0);
+      setCheersCount(profile?.cheersCount ?? 0);
       
       if (profile?.profilePhoto) {
         const url = await uploadService.getImageUrl(profile.profilePhoto, 'view');
@@ -266,6 +268,11 @@ export default function ProfileScreen() {
             <Text style={styles.statNumber}>{connectionsCount}</Text>
             <Text style={styles.statLabel}>Friends</Text>
           </Pressable>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{cheersCount}</Text>
+            <Text style={styles.statLabel}>Cheers</Text>
+          </View>
         </View>
 
         {/* Profile Info Section */}

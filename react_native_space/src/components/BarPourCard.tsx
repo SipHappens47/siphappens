@@ -207,7 +207,7 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
                 pour?.hasUserCheered && styles.actionTextActive,
               ]}
             >
-              Cheers
+              {pour?.cheersCount ? `Cheers (${pour.cheersCount})` : 'Cheers'}
             </Text>
           </Pressable>
 

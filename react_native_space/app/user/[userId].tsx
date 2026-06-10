@@ -329,6 +329,11 @@ export default function PublicUserProfileScreen() {
             <Text style={styles.statNumber}>{profile?.connectionsCount ?? 0}</Text>
             <Text style={styles.statLabel}>Friends</Text>
           </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{profile?.cheersCount ?? 0}</Text>
+            <Text style={styles.statLabel}>Cheers</Text>
+          </View>
         </View>
 
         {/* Connection Button + Mute Toggle */}

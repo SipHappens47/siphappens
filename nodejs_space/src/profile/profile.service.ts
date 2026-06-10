@@ -34,11 +34,13 @@ export class ProfileService {
       throw new Error('User not found');
     }
 
-    const [poursCount, connectionsCount] = await Promise.all([
+    const [poursCount, connectionsCount, cheersCount] = await Promise.all([
       this.prisma.pour.count({ where: { userid: userId } }),
       this.prisma.connection.count({
         where: { status: 'Accepted', OR: [{ initiatorid: userId }, { receiverid: userId }] },
       }),
+      // Cheers received across this user's pours
+      this.prisma.cheer.count({ where: { pour: { userid: userId } } }),
     ]);
 
     let displayName = user.name;
@@ -64,6 +66,7 @@ export class ProfileService {
       createdAt: user.createdat,
       poursCount,
       connectionsCount,
+      cheersCount,
     };
   }
 
@@ -154,11 +157,13 @@ export class ProfileService {
 
       console.log('[ProfileService] User found:', user.name);
 
-      const [poursCount, connectionsCount] = await Promise.all([
+      const [poursCount, connectionsCount, cheersCount] = await Promise.all([
         this.prisma.pour.count({ where: { userid: userId, isshared: true } }),
         this.prisma.connection.count({
           where: { status: 'Accepted', OR: [{ initiatorid: userId }, { receiverid: userId }] },
         }),
+        // Cheers received on this user's shared pours
+        this.prisma.cheer.count({ where: { pour: { userid: userId, isshared: true } } }),
       ]);
 
       return {
@@ -171,6 +176,7 @@ export class ProfileService {
         createdAt: user.createdat,
         poursCount,
         connectionsCount,
+        cheersCount,
       };
     } catch (error) {
       console.error('[ProfileService] Error getting public profile:', error);

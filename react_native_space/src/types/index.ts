@@ -9,6 +9,7 @@ export interface User {
   createdAt: string;
   poursCount?: number;
   connectionsCount?: number;
+  cheersCount?: number;
   distilleryId?: string;
   isDistilleryAccount?: boolean;
   distillery?: {
