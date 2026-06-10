@@ -241,6 +241,18 @@ export default function DistilleryProfileScreen() {
 
           {profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
 
+          {/* Owner: edit profile */}
+          {isOwner && (
+            <View style={styles.actionButtons}>
+              <Pressable
+                style={styles.followButton}
+                onPress={() => router.push('/distilleries/edit-profile' as any)}
+              >
+                <Text style={styles.followButtonText}>Edit Profile</Text>
+              </Pressable>
+            </View>
+          )}
+
           {/* Only show action buttons for non-owners */}
           {!isOwner && (
             <View style={styles.actionButtons}>
@@ -332,7 +344,11 @@ export default function DistilleryProfileScreen() {
                 <Pressable
                   key={spirit.id}
                   style={styles.spiritCard}
-                  onPress={() => router.push(`/spirit/${spirit.id}` as any)}
+                  onPress={() =>
+                    isOwner
+                      ? router.push(`/distilleries/spirit-form?spiritId=${spirit.id}` as any)
+                      : router.push(`/spirit/${spirit.id}` as any)
+                  }
                 >
                   {spirit.bottleImage ? (
                     <Image source={{ uri: spirit.bottleImage }} style={styles.bottleImage} resizeMode="contain" />
@@ -369,7 +385,7 @@ export default function DistilleryProfileScreen() {
         <FAB
           icon="plus"
           style={styles.fab}
-          onPress={() => router.push('/distillery-spirit-add' as any)}
+          onPress={() => router.push('/distilleries/spirit-form' as any)}
           label="Add Spirit"
         />
       )}

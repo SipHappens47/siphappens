@@ -359,6 +359,19 @@ export default function ProfileScreen() {
             >
               View Database Stats
             </Button>
+
+            <Button
+              mode="contained-tonal"
+              icon="check-decagram"
+              onPress={() => {
+                setShowAdminDialog(false);
+                router.push('/admin/verification' as any);
+              }}
+              style={styles.dialogButton}
+              disabled={seedLoading}
+            >
+              Verify Distilleries
+            </Button>
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setShowAdminDialog(false)} disabled={seedLoading}>

@@ -581,6 +581,47 @@ class ApiService {
     return response?.data ?? { isFollowing: false, followersCount: 0 };
   }
 
+  async updateDistilleryProfile(
+    distilleryId: string,
+    data: { name?: string; bio?: string; logo?: string; heroImage?: string; region?: string; country?: string; spiritTypes?: string },
+  ): Promise<any> {
+    const response = await this.client.put(
+      new URL(`/api/distilleries/${distilleryId}/profile`, API_URL).toString(),
+      data
+    );
+    return response?.data;
+  }
+
+  async addShelfSpirit(
+    distilleryId: string,
+    data: { name: string; category?: string; style?: string; abv?: number; region?: string; bottleImage: string; officialTastingNotes?: string; flavorTagIds?: string[] },
+  ): Promise<any> {
+    const response = await this.client.post(
+      new URL(`/api/distilleries/${distilleryId}/shelf/spirits`, API_URL).toString(),
+      data
+    );
+    return response?.data;
+  }
+
+  async updateShelfSpirit(
+    distilleryId: string,
+    spiritId: string,
+    data: { name?: string; category?: string; style?: string; abv?: number; region?: string; bottleImage?: string; officialTastingNotes?: string; flavorTagIds?: string[] },
+  ): Promise<any> {
+    const response = await this.client.put(
+      new URL(`/api/distilleries/${distilleryId}/shelf/spirits/${spiritId}`, API_URL).toString(),
+      data
+    );
+    return response?.data;
+  }
+
+  async deleteShelfSpirit(distilleryId: string, spiritId: string): Promise<any> {
+    const response = await this.client.delete(
+      new URL(`/api/distilleries/${distilleryId}/shelf/spirits/${spiritId}`, API_URL).toString()
+    );
+    return response?.data;
+  }
+
   async getDistilleryAnalytics(distilleryId: string): Promise<DistilleryAnalytics> {
     const response = await this.client.get<DistilleryAnalytics>(
       new URL(`/api/distilleries/${distilleryId}/analytics`, API_URL).toString()
