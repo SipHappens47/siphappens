@@ -125,7 +125,7 @@ class ApiService {
     return response?.data ?? {} as User;
   }
 
-  async updateProfile(data: { name?: string; profilePhoto?: string; bio?: string; experienceLevel?: string }): Promise<User> {
+  async updateProfile(data: { name?: string; profilePhoto?: string; heroImage?: string; bio?: string; experienceLevel?: string }): Promise<User> {
     const response = await this.client.put<User>(new URL('/api/profile', API_URL).toString(), data);
     return response?.data ?? {} as User;
   }
@@ -579,6 +579,11 @@ class ApiService {
       new URL(`/api/distilleries/${distilleryId}/follow`, API_URL).toString()
     );
     return response?.data ?? { isFollowing: false, followersCount: 0 };
+  }
+
+  async getReceivedCheers(): Promise<{ id: string; createdAt: string; user: { id: string; name: string; profilePhoto?: string }; pourId: string; spiritName: string }[]> {
+    const response = await this.client.get(new URL('/api/cheers/received', API_URL).toString());
+    return (response?.data as any) ?? [];
   }
 
   async updateDistilleryProfile(

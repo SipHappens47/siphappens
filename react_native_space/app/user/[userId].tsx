@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { Text, IconButton, Avatar, ActivityIndicator, Card, Button } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -295,6 +295,11 @@ export default function PublicUserProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Cover Photo */}
+        {profile?.heroImage && (
+          <Image source={{ uri: profile.heroImage }} style={styles.heroBanner} resizeMode="cover" />
+        )}
+
         {/* Profile Photo Section */}
         <View style={styles.profilePhotoSection}>
           {profilePhotoUri ? (
@@ -473,6 +478,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
+  },
+  heroBanner: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
   },
   profilePhotoSection: {
     alignItems: 'center',

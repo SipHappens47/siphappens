@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { apiService } from '../../src/services/api';
 import { Pour, RadarEntry } from '../../src/types';
-import { PourCard } from '../../src/components/PourCard';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -205,6 +204,76 @@ export default function ShelfScreen() {
     );
   };
 
+  // List-style pour row (matches the distillery shelf look): image left,
+  // name + meta, shared/private indicator, pencil to edit.
+  const PourListItem = ({ item }: { item: Pour }) => {
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+      loadImage();
+    }, [item?.id]);
+
+    const loadImage = async () => {
+      try {
+        if (item?.image) {
+          const url = await apiService.getFileUrl(item.image, 'view');
+          setImageUrl(url?.url ?? null);
+          return;
+        }
+        if (item?.spirit?.bottleImage) {
+          if (item.spirit.bottleImage.startsWith('http')) {
+            setImageUrl(item.spirit.bottleImage);
+          } else {
+            const url = await apiService.getFileUrl(item.spirit.bottleImage, 'view');
+            setImageUrl(url?.url ?? null);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load pour image:', error);
+      }
+    };
+
+    return (
+      <Card style={styles.radarCard} onPress={() => router.push(`/pour/${item?.id ?? ''}`)}>
+        <View style={styles.radarCardContent}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.pourListImage} resizeMode="cover" />
+          ) : (
+            <View style={[styles.pourListImage, styles.imagePlaceholder]}>
+              <MaterialCommunityIcons name="glass-mug-variant" size={32} color={Colors.textMuted} />
+            </View>
+          )}
+          <View style={styles.spiritInfo}>
+            <Text style={styles.spiritName}>{item?.spirit?.name ?? 'Unknown'}</Text>
+            <View style={styles.metaRow}>
+              {item?.spirit?.category && (
+                <Text style={styles.category}>{item.spirit.category}</Text>
+              )}
+              {item?.spirit?.abv && <Text style={styles.abv}>{item.spirit.abv}% ABV</Text>}
+            </View>
+            <View style={styles.sharedRow}>
+              <MaterialCommunityIcons
+                name={item?.isShared ? 'earth' : 'lock'}
+                size={13}
+                color={item?.isShared ? Colors.accent : Colors.textMuted}
+              />
+              <Text style={[styles.sharedText, item?.isShared && styles.sharedTextActive]}>
+                {item?.isShared ? 'On The Bar' : 'Private'}
+              </Text>
+            </View>
+          </View>
+          <IconButton
+            icon="pencil"
+            size={20}
+            iconColor={Colors.accent}
+            onPress={() => router.push(`/pour/edit/${item?.id ?? ''}`)}
+            style={styles.removeButton}
+          />
+        </View>
+      </Card>
+    );
+  };
+
   const renderDistilleryShelfEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>🏭</Text>
@@ -275,10 +344,7 @@ export default function ShelfScreen() {
             icon="pencil"
             size={20}
             iconColor={Colors.accent}
-            onPress={() => {
-              // TODO: Navigate to edit spirit screen
-              Alert.alert('Edit Spirit', 'Edit functionality coming soon');
-            }}
+            onPress={() => router.push(`/distilleries/spirit-form?spiritId=${item?.id ?? ''}` as any)}
             style={styles.removeButton}
           />
         </View>
@@ -308,10 +374,7 @@ export default function ShelfScreen() {
           icon="plus"
           label="Add Spirit"
           style={styles.fab}
-          onPress={() => {
-            // TODO: Navigate to add spirit screen
-            Alert.alert('Add Spirit', 'Add spirit functionality coming soon');
-          }}
+          onPress={() => router.push('/distilleries/spirit-form' as any)}
         />
       </SafeAreaView>
     );
@@ -365,12 +428,7 @@ export default function ShelfScreen() {
         <FlatList
           data={filteredPours}
           keyExtractor={(item) => item?.id ?? ''}
-          renderItem={({ item }) => (
-            <PourCard
-              pour={item}
-              onPress={() => router.push(`/pour/${item?.id ?? ''}`)}
-            />
-          )}
+          renderItem={({ item }) => <PourListItem item={item} />}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={!loading ? renderPoursEmpty : null}
           refreshControl={
@@ -537,6 +595,24 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     margin: 0,
+  },
+  pourListImage: {
+    width: 70,
+    height: 90,
+    borderRadius: 8,
+  },
+  sharedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  sharedText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
+  sharedTextActive: {
+    color: Colors.accent,
   },
   tagsRow: {
     flexDirection: 'row',

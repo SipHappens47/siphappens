@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
-import { Text, TextInput, Button } from 'react-native-paper';
+import { Text, TextInput, Button, Switch } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiService } from '../../../src/services/api';
@@ -17,6 +17,7 @@ export default function EditPourScreen() {
 
   const [pour, setPour] = useState<Pour | null>(null);
   const [whyItHit, setWhyItHit] = useState('');
+  const [isShared, setIsShared] = useState(false);
   const [imageUri, setImageUri] = useState<string | undefined>();
   const [existingImageId, setExistingImageId] = useState<string | undefined>();
   const [flavorTags, setFlavorTags] = useState<FlavorTag[]>([]);
@@ -47,6 +48,7 @@ export default function EditPourScreen() {
 
       setPour(pourData);
       setWhyItHit(pourData?.whyItHit ?? '');
+      setIsShared(pourData?.isShared ?? false);
       setExistingImageId(pourData?.image);
       
       if (pourData?.image) {
@@ -107,6 +109,7 @@ export default function EditPourScreen() {
       await apiService.updatePour(pour?.id ?? '', {
         whyItHit: whyItHit.trim(),
         image: imageFileId,
+        isShared,
         flavorTagIds: selectedFlavorTagIds,
       });
 
@@ -188,6 +191,16 @@ export default function EditPourScreen() {
               }}
               label="Change Photo"
             />
+
+            <View style={styles.shareRow}>
+              <View style={styles.shareTextContainer}>
+                <Text style={styles.shareTitle}>Share to The Bar</Text>
+                <Text style={styles.shareSubtitle}>
+                  {isShared ? 'Visible to Fellow Sippers in the feed' : 'Private — only you can see this pour'}
+                </Text>
+              </View>
+              <Switch value={isShared} onValueChange={setIsShared} color={Colors.accent} />
+            </View>
           </View>
 
           <View style={styles.actions}>
@@ -283,6 +296,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     marginTop: spacing.sm,
+  },
+  shareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  shareTextContainer: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  shareTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  shareSubtitle: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   actions: {
     marginTop: spacing.xl,

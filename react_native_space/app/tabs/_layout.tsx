@@ -3,9 +3,11 @@ import { Tabs, useRouter } from 'expo-router';
 import { Pressable, Platform, View, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../src/constants/colors';
 import { useAuth } from '../../src/context/AuthContext';
 import { uploadService } from '../../src/services/upload';
+import { apiService } from '../../src/services/api';
 import { ADMIN_EMAIL } from '../../src/constants/admin';
 
 export default function TabsLayout() {
@@ -32,6 +34,40 @@ export default function TabsLayout() {
     })();
     return () => { active = false; };
   }, [user?.profilePhoto]);
+
+  // Private notification dot: incoming sipper requests or new cheers since last seen.
+  const [hasNotifications, setHasNotifications] = useState(false);
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+
+    const check = async () => {
+      try {
+        const [pending, cheers, lastSeen] = await Promise.all([
+          apiService.getPendingRequests(),
+          apiService.getReceivedCheers(),
+          AsyncStorage.getItem('notificationsLastSeen'),
+        ]);
+        const incoming = (pending ?? []).filter(
+          (c: any) => c?.receiver?.id === user.id && c?.status?.toLowerCase() === 'pending',
+        );
+        const seenTime = lastSeen ? new Date(lastSeen).getTime() : 0;
+        const hasNewCheers = (cheers ?? []).some(
+          (c: any) => new Date(c?.createdAt ?? 0).getTime() > seenTime,
+        );
+        if (active) setHasNotifications(incoming.length > 0 || hasNewCheers);
+      } catch {
+        /* keep previous dot state */
+      }
+    };
+
+    check();
+    const interval = setInterval(check, 60000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [user?.id]);
 
   return (
     <Tabs
@@ -62,6 +98,32 @@ export default function TabsLayout() {
         },
         headerRight: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
+            <Pressable
+              onPress={() => {
+                setHasNotifications(false);
+                router.push('/notifications' as any);
+              }}
+              style={{ marginRight: 12 }}
+            >
+              <MaterialCommunityIcons
+                name={hasNotifications ? 'bell' : 'bell-outline'}
+                size={26}
+                color={hasNotifications ? Colors.accent : Colors.textSecondary}
+              />
+              {hasNotifications && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: 9,
+                    height: 9,
+                    borderRadius: 5,
+                    backgroundColor: Colors.error,
+                  }}
+                />
+              )}
+            </Pressable>
             <Pressable
               onPress={() => router.push('/connections')}
               style={{ marginRight: 12 }}

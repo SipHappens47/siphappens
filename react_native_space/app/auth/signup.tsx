@@ -107,14 +107,16 @@ export default function SignupScreen() {
     const uploadedFiles: { logo?: string; heroImage?: string } = {};
 
     try {
+      // The distillery logo/heroImage columns hold direct URLs, so resolve the
+      // uploaded file to its public URL instead of storing the file id.
       if (logoUri) {
-        const fileId = await uploadService.uploadImage(logoUri, 'logo.jpg', true);
-        uploadedFiles.logo = fileId;
+        const fileId = await uploadService.uploadImage(logoUri, 'distillery-logo.jpg', true);
+        uploadedFiles.logo = await uploadService.getImageUrl(fileId, 'view');
       }
 
       if (heroImageUri) {
-        const fileId = await uploadService.uploadImage(heroImageUri, 'hero.jpg', true);
-        uploadedFiles.heroImage = fileId;
+        const fileId = await uploadService.uploadImage(heroImageUri, 'distillery-hero.jpg', true);
+        uploadedFiles.heroImage = await uploadService.getImageUrl(fileId, 'view');
       }
     } catch (error) {
       console.error('Error uploading images:', error);

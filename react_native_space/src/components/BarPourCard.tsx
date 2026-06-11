@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, Pressable } from 'react-native';
 import { Text, Card, Chip } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { BarPour } from '../types';
 import { Colors } from '../constants/colors';
 import { spacing } from '../constants/theme';
 import { apiService } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
 interface BarPourCardProps {
   pour: BarPour;
@@ -19,9 +17,6 @@ interface BarPourCardProps {
 }
 
 export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, onViewUserProfile, showOfficialBadge }: BarPourCardProps) {
-  const router = useRouter();
-  const { user } = useAuth();
-  const isOwnPour = !!user?.id && pour?.user?.id === user.id;
   const [pourImageUrl, setPourImageUrl] = useState<string | null>(null);
   const [bottleImageUrl, setBottleImageUrl] = useState<string | null>(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
@@ -144,21 +139,13 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
 
       {/* Tap anywhere on the post to open it */}
       <Pressable onPress={() => onViewDetails(pour?.id ?? '')}>
-        {pourImageUrl && (
-          <Image
-            source={{ uri: pourImageUrl }}
-            style={styles.pourImage}
-            resizeMode="cover"
-          />
-        )}
-
         <Card.Content style={styles.content}>
           <View style={styles.spiritRow}>
-            {bottleImageUrl && (
+            {(pourImageUrl || bottleImageUrl) && (
               <Image
-                source={{ uri: bottleImageUrl }}
-                style={styles.bottleImage}
-                resizeMode="contain"
+                source={{ uri: pourImageUrl ?? bottleImageUrl ?? '' }}
+                style={styles.sideImage}
+                resizeMode="cover"
               />
             )}
             <View style={styles.spiritInfo}>
@@ -223,20 +210,6 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
             <Text style={styles.actionText}>Add to Radar</Text>
           </Pressable>
 
-          {/* Edit shortcut on the user's own posts only */}
-          {isOwnPour && (
-            <Pressable
-              onPress={() => router.push(`/pour/edit/${pour?.id ?? ''}` as any)}
-              style={styles.actionButton}
-            >
-              <MaterialCommunityIcons
-                name="pencil"
-                size={20}
-                color={Colors.textMuted}
-              />
-              <Text style={styles.actionText}>Edit</Text>
-            </Pressable>
-          )}
         </View>
       </Card.Content>
     </Card>
@@ -321,10 +294,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted, // Muted for timestamps
     marginTop: 2,
   },
-  pourImage: {
-    width: '100%',
-    height: 200,
-  },
   content: {
     padding: spacing.md,
   },
@@ -333,10 +302,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-  bottleImage: {
-    width: 60,
-    height: 80,
-    borderRadius: 4,
+  sideImage: {
+    width: 110,
+    height: 130,
+    borderRadius: 8,
   },
   spiritInfo: {
     flex: 1,

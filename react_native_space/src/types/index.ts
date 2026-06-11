@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   profilePhoto?: string;
+  heroImage?: string;
   bio?: string;
   experienceLevel?: 'Curious' | 'Social' | 'Serious';
   ageVerified: boolean;
