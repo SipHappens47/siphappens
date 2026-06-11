@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { AuthResponse, User, Spirit, Pour, FlavorTag, Distillery, SpiritRecognitionResponse, FileUploadResponse, FileUrlResponse, Connection, FellowSipper, BarPour, RadarEntry, UniversalSearchResults, Badge, TasteSummary } from '../types';
 import { DistilleryProfile, DistilleryDiscoverData, DistilleryPour, DistillerySpirit, DistilleryAnalytics } from '../types/distillery';
+import { warmingStart, warmingEnd } from '../components/WarmingOverlay';
 
 // Cloud backend (NestJS on Render). Reachable from any device, no PC required.
 // For local development against the PC, swap to 'http://10.0.0.3:3000/'.
@@ -26,12 +27,20 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000, // 30 second timeout
+      // Render free tier cold starts can take ~60s; keep requests alive
+      // long enough for the server to wake instead of failing at 30s.
+      timeout: 90000,
     });
 
     this.client.interceptors.request.use(
       async (config) => {
         console.log('[ApiService] Request:', config.method?.toUpperCase(), config.url);
+        // If this request takes >3s the server is likely cold-starting:
+        // show the global warming overlay until it responds.
+        (config as any).__warmingTimer = setTimeout(() => {
+          (config as any).__warmingShown = true;
+          warmingStart();
+        }, 3000);
         try {
           const token = Platform.OS === 'web'
             ? await AsyncStorage.getItem('authToken')
@@ -51,12 +60,22 @@ class ApiService {
       }
     );
 
+    const clearWarming = (config: any) => {
+      if (config?.__warmingTimer) clearTimeout(config.__warmingTimer);
+      if (config?.__warmingShown) {
+        config.__warmingShown = false;
+        warmingEnd();
+      }
+    };
+
     this.client.interceptors.response.use(
       (response) => {
         console.log('[ApiService] Response:', response.status, response.config.url);
+        clearWarming(response.config);
         return response;
       },
       async (error: AxiosError) => {
+        clearWarming(error?.config);
         console.error('[ApiService] Response error:', {
           status: error?.response?.status,
           url: error?.config?.url,
