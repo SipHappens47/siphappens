@@ -118,6 +118,47 @@ export default function TheBarScreen() {
     );
   };
 
+  // Shown under the feed while it has 1 or fewer posts: three ways to fill the Bar.
+  const renderGettingStarted = () => {
+    if (loading || pours.length > 1) return null;
+    return (
+      <View style={styles.gettingStarted}>
+        <View style={styles.actionCard}>
+          <MaterialCommunityIcons name="camera-outline" size={32} color={Colors.accent} />
+          <Text style={styles.actionTitle}>Log your first pour</Text>
+          <Text style={styles.actionText}>
+            Scan a bottle to add it to your shelf and share it here
+          </Text>
+          <Pressable style={styles.actionButton} onPress={() => router.push('/camera')}>
+            <Text style={styles.actionButtonText}>Open camera</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.actionCard}>
+          <MaterialCommunityIcons name="account-group-outline" size={32} color={Colors.accent} />
+          <Text style={styles.actionTitle}>Connect with friends</Text>
+          <Text style={styles.actionText}>
+            Their pours will appear right here in your Bar
+          </Text>
+          <Pressable style={styles.actionButton} onPress={() => router.push('/connections')}>
+            <Text style={styles.actionButtonText}>Find sippers</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.actionCard}>
+          <MaterialCommunityIcons name="office-building-outline" size={32} color={Colors.accent} />
+          <Text style={styles.actionTitle}>Follow a distillery</Text>
+          <Text style={styles.actionText}>
+            See official pours and new releases from SA's best producers
+          </Text>
+          <Pressable style={styles.actionButton} onPress={() => setActiveTab('distilleries')}>
+            <Text style={styles.actionButtonText}>Browse distilleries</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
@@ -172,6 +213,7 @@ export default function TheBarScreen() {
             )}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderGettingStarted}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -222,6 +264,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xxl * 2,
     paddingHorizontal: spacing.xl,
+  },
+  gettingStarted: {
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  actionCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  actionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  actionText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  actionButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: 10,
+  },
+  actionButtonText: {
+    color: Colors.background,
+    fontSize: 14,
+    fontWeight: '700',
   },
   emptyIcon: {
     fontSize: 80,
