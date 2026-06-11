@@ -1,18 +1,33 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
 export default function ScanScreen() {
   const router = useRouter();
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.08, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.content}>
-        <Text style={styles.icon}>📸</Text>
+        <Animated.View style={[styles.iconWrap, { transform: [{ scale: pulse }] }]}>
+          <MaterialCommunityIcons name="camera" size={80} color={Colors.accent} />
+        </Animated.View>
         <Text style={styles.title}>Capture Your Pour</Text>
         <Text style={styles.description}>
           Scan a bottle to identify the spirit and create a journal entry.
@@ -52,8 +67,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
-  icon: {
-    fontSize: 64,
+  iconWrap: {
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   title: {
