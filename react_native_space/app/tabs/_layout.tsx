@@ -9,6 +9,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { uploadService } from '../../src/services/upload';
 import { apiService } from '../../src/services/api';
 import { ADMIN_EMAIL } from '../../src/constants/admin';
+import { ScanIcon, ShelfIcon } from '../../src/components/TabIcons';
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -165,18 +166,14 @@ export default function TabsLayout() {
         name="scan"
         options={{
           title: 'Scan',
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="barcode-scan" size={36} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <ScanIcon color={color} size={32} />,
         }}
       />
       <Tabs.Screen
         name="shelf"
         options={{
           title: 'My Shelf',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="book-open-variant" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <ShelfIcon color={color} size={size} />,
         }}
       />
       <Tabs.Screen
