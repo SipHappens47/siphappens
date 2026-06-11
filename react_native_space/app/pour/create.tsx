@@ -3,17 +3,23 @@ import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, Im
 import { Text, TextInput, Button, Switch, SegmentedButtons } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../../src/services/api';
 import { uploadService } from '../../src/services/upload';
-import { Spirit, FlavorTag } from '../../src/types';
+import { useAuth } from '../../src/context/AuthContext';
+import { Spirit, FlavorTag, Badge } from '../../src/types';
 import { FlavorChips } from '../../src/components/FlavorChips';
 import { ImagePickerComponent } from '../../src/components/ImagePickerComponent';
+import { showBadgeToast } from '../../src/components/BadgeToast';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+
+const BADGE_SNAPSHOT_KEY = 'badgeProgressSnapshot';
 
 export default function CreatePourScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [spirit, setSpirit] = useState<Spirit | null>(null);
   const [reviewType, setReviewType] = useState<'hit' | 'notMyStyle'>('hit');
@@ -83,6 +89,45 @@ export default function CreatePourScreen() {
     return true;
   };
 
+  // Compare badge progress against the last stored snapshot; if a badge moved
+  // forward, celebrate the one that progressed the most.
+  const checkBadgeProgress = async () => {
+    try {
+      if (!user?.id) return;
+      const badges: Badge[] = await apiService.getPublicUserBadges(user.id);
+      const stored = await AsyncStorage.getItem(BADGE_SNAPSHOT_KEY);
+      const previous: Record<string, number> = stored ? JSON.parse(stored) : {};
+
+      let best: Badge | null = null;
+      let bestDelta = 0;
+      const snapshot: Record<string, number> = {};
+
+      for (const badge of badges ?? []) {
+        const pct = badge?.progress?.percentage ?? 0;
+        snapshot[badge.id] = pct;
+        const delta = pct - (previous[badge.id] ?? 0);
+        if (delta > bestDelta) {
+          bestDelta = delta;
+          best = badge;
+        }
+      }
+
+      await AsyncStorage.setItem(BADGE_SNAPSHOT_KEY, JSON.stringify(snapshot));
+
+      // Only celebrate when we had a previous snapshot to compare against,
+      // otherwise the very first pour would "progress" every badge at once.
+      if (best && stored) {
+        showBadgeToast({
+          name: best.name,
+          percentage: best.progress?.percentage ?? 0,
+          nextTier: best.progress?.nextTier,
+        });
+      }
+    } catch (error) {
+      console.error('[CreatePour] Badge progress check failed:', error);
+    }
+  };
+
   const handleSave = async () => {
     if (!validate()) return;
 
@@ -109,7 +154,10 @@ export default function CreatePourScreen() {
       Alert.alert('Success', 'Pour saved successfully!', [
         {
           text: 'OK',
-          onPress: () => router.replace('/tabs/shelf'),
+          onPress: () => {
+            checkBadgeProgress(); // fire-and-forget: toast appears over the shelf
+            router.replace('/tabs/shelf');
+          },
         },
       ]);
     } catch (error) {
