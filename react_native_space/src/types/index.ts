@@ -48,6 +48,9 @@ export interface Pour {
   whyItHit: string;
   isShared: boolean;
   image?: string;
+  rating?: number | null;
+  wouldPourAgain?: string | null;
+  occasions?: string | null;
   flavorTags?: FlavorTag[];
   createdAt: string;
   updatedAt: string;

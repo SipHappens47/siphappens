@@ -219,6 +219,9 @@ class ApiService {
     isShared: boolean;
     image?: string;
     flavorTagIds?: string[];
+    rating?: number;
+    wouldPourAgain?: string;
+    occasions?: string;
   }): Promise<Pour> {
     const response = await this.client.post<Pour>(new URL('/api/pours', API_URL).toString(), data);
     return response?.data ?? {} as Pour;
@@ -255,6 +258,9 @@ class ApiService {
     image?: string;
     flavorTagIds?: string[];
     isShared?: boolean;
+    rating?: number | null;
+    wouldPourAgain?: string | null;
+    occasions?: string | null;
   }): Promise<Pour> {
     const response = await this.client.put<Pour>(new URL(`/api/pours/${id}`, API_URL).toString(), data);
     return response?.data ?? {} as Pour;

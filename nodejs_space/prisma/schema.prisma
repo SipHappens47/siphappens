@@ -140,6 +140,9 @@ model pour {
   whyithit         String
   isshared         Boolean  @default(false)
   image            String?
+  rating           Int?     // Star rating 1-5
+  wouldpouragain   String?  // Yes / No / Maybe
+  occasions        String?  // Comma-separated, max 3 (e.g. "Casual,With food")
   createdat        DateTime @default(now())
   updatedat        DateTime @updatedAt
   

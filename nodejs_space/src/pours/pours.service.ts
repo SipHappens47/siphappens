@@ -21,6 +21,9 @@ export class PoursService {
         whyithit: dto.whyItHit,
         isshared: dto.isShared ?? false,
         image: dto.image,
+        rating: dto.rating,
+        wouldpouragain: dto.wouldPourAgain,
+        occasions: dto.occasions,
         ...(flavorTagIds && {
           flavortags: {
             create: flavorTagIds.map((tagId) => ({
@@ -178,6 +181,9 @@ export class PoursService {
         ...(pourData.whyItHit && { whyithit: pourData.whyItHit }),
         ...(pourData.image !== undefined && { image: pourData.image }),
         ...(pourData.isShared !== undefined && { isshared: pourData.isShared }),
+        ...(pourData.rating !== undefined && { rating: pourData.rating }),
+        ...(pourData.wouldPourAgain !== undefined && { wouldpouragain: pourData.wouldPourAgain }),
+        ...(pourData.occasions !== undefined && { occasions: pourData.occasions }),
         ...(flavorTagIds && {
           flavortags: {
             create: flavorTagIds.map((tagId) => ({
@@ -260,6 +266,9 @@ export class PoursService {
       whyItHit: pour.whyithit,
       isShared: pour.isshared,
       image: pour.image,
+      rating: pour.rating,
+      wouldPourAgain: pour.wouldpouragain,
+      occasions: pour.occasions,
       createdAt: pour.createdat,
       updatedAt: pour.updatedat,
       spirit: {

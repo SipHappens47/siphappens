@@ -10,6 +10,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { Spirit, FlavorTag, Badge } from '../../src/types';
 import { FlavorChips } from '../../src/components/FlavorChips';
 import { ImagePickerComponent } from '../../src/components/ImagePickerComponent';
+import { TastingNotes } from '../../src/components/TastingNotes';
 import { showBadgeToast } from '../../src/components/BadgeToast';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
@@ -28,6 +29,9 @@ export default function CreatePourScreen() {
   const [flavorTags, setFlavorTags] = useState<FlavorTag[]>([]);
   const [selectedFlavorTagIds, setSelectedFlavorTagIds] = useState<string[]>([]);
   const [isShared, setIsShared] = useState(false);
+  const [rating, setRating] = useState<number | null>(null);
+  const [wouldPourAgain, setWouldPourAgain] = useState<string | null>(null);
+  const [occasions, setOccasions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -149,6 +153,9 @@ export default function CreatePourScreen() {
         isShared: isShared,
         image: imageFileId,
         flavorTagIds: selectedFlavorTagIds,
+        rating: rating ?? undefined,
+        wouldPourAgain: wouldPourAgain ?? undefined,
+        occasions: occasions.length > 0 ? occasions.join(',') : undefined,
       });
 
       Alert.alert('Success', 'Pour saved successfully!', [
@@ -246,6 +253,15 @@ export default function CreatePourScreen() {
               tags={flavorTags}
               selectedIds={selectedFlavorTagIds}
               onToggle={handleToggleFlavorTag}
+            />
+
+            <TastingNotes
+              rating={rating}
+              onRatingChange={setRating}
+              wouldPourAgain={wouldPourAgain}
+              onWouldPourAgainChange={setWouldPourAgain}
+              occasions={occasions}
+              onOccasionsChange={setOccasions}
             />
 
             <Text style={styles.sectionTitle}>Add Photo (Optional)</Text>

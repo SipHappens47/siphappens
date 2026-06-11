@@ -1,4 +1,4 @@
-import { IsString, IsBoolean, IsOptional, IsArray, IsUUID, MinLength } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsArray, IsUUID, MinLength, IsInt, Min, Max, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePourDto {
@@ -26,4 +26,21 @@ export class CreatePourDto {
   @IsArray()
   @IsUUID('4', { each: true })
   flavorTagIds?: string[];
+
+  @ApiProperty({ example: 4, required: false, description: 'Star rating 1-5' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating?: number;
+
+  @ApiProperty({ example: 'Yes', required: false, enum: ['Yes', 'No', 'Maybe'] })
+  @IsOptional()
+  @IsIn(['Yes', 'No', 'Maybe'])
+  wouldPourAgain?: string;
+
+  @ApiProperty({ example: 'Casual,With food', required: false, description: 'Comma-separated occasions, max 3' })
+  @IsOptional()
+  @IsString()
+  occasions?: string;
 }

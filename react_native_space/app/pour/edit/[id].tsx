@@ -8,6 +8,7 @@ import { uploadService } from '../../../src/services/upload';
 import { Pour, FlavorTag } from '../../../src/types';
 import { FlavorChips } from '../../../src/components/FlavorChips';
 import { ImagePickerComponent } from '../../../src/components/ImagePickerComponent';
+import { TastingNotes } from '../../../src/components/TastingNotes';
 import { Colors } from '../../../src/constants/colors';
 import { spacing } from '../../../src/constants/theme';
 
@@ -18,6 +19,9 @@ export default function EditPourScreen() {
   const [pour, setPour] = useState<Pour | null>(null);
   const [whyItHit, setWhyItHit] = useState('');
   const [isShared, setIsShared] = useState(false);
+  const [rating, setRating] = useState<number | null>(null);
+  const [wouldPourAgain, setWouldPourAgain] = useState<string | null>(null);
+  const [occasions, setOccasions] = useState<string[]>([]);
   const [imageUri, setImageUri] = useState<string | undefined>();
   const [existingImageId, setExistingImageId] = useState<string | undefined>();
   const [flavorTags, setFlavorTags] = useState<FlavorTag[]>([]);
@@ -49,6 +53,9 @@ export default function EditPourScreen() {
       setPour(pourData);
       setWhyItHit(pourData?.whyItHit ?? '');
       setIsShared(pourData?.isShared ?? false);
+      setRating(pourData?.rating ?? null);
+      setWouldPourAgain(pourData?.wouldPourAgain ?? null);
+      setOccasions(pourData?.occasions ? pourData.occasions.split(',').filter(Boolean) : []);
       setExistingImageId(pourData?.image);
       
       if (pourData?.image) {
@@ -111,6 +118,9 @@ export default function EditPourScreen() {
         image: imageFileId,
         isShared,
         flavorTagIds: selectedFlavorTagIds,
+        rating,
+        wouldPourAgain,
+        occasions: occasions.length > 0 ? occasions.join(',') : null,
       });
 
       Alert.alert('Success', 'Pour updated successfully!', [
@@ -179,6 +189,15 @@ export default function EditPourScreen() {
               tags={flavorTags}
               selectedIds={selectedFlavorTagIds}
               onToggle={handleToggleFlavorTag}
+            />
+
+            <TastingNotes
+              rating={rating}
+              onRatingChange={setRating}
+              wouldPourAgain={wouldPourAgain}
+              onWouldPourAgainChange={setWouldPourAgain}
+              occasions={occasions}
+              onOccasionsChange={setOccasions}
             />
 
             <Text style={styles.sectionTitle}>Photo</Text>
