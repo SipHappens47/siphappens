@@ -16,11 +16,18 @@ import { UpdateInsightsDto } from './dto/update-insights.dto';
 import { AddSpiritDto } from './dto/add-spirit.dto';
 import { UpdateSpiritDto } from './dto/update-spirit.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { CreateDistilleryDto } from '../spirits/dto/create-distillery.dto';
 
 @Controller('api/distilleries')
 @UseGuards(JwtAuthGuard)
 export class DistilleriesController {
   constructor(private readonly distilleriesService: DistilleriesService) {}
+
+  // Used by the scan flow when a pour names a distillery we don't have yet
+  @Post()
+  async create(@Body() dto: CreateDistilleryDto) {
+    return this.distilleriesService.findOrCreateByName(dto);
+  }
 
   @Get('search')
   async search(@Query('q') q: string, @Request() req: any) {

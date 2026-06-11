@@ -140,6 +140,30 @@ export class DistilleriesService {
   }
 
   // GET /api/distilleries/:id/profile - Full profile
+  // Find-or-create by name; the scan flow calls this when a pour names an
+  // unknown distillery. Reusing an existing match prevents duplicates.
+  async findOrCreateByName(dto: { name: string; country?: string; region?: string }) {
+    const name = dto.name?.trim();
+    if (!name) {
+      throw new NotFoundException('Distillery name is required');
+    }
+
+    const existing = await this.prisma.distillery.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    return this.prisma.distillery.create({
+      data: {
+        name,
+        ...(dto.country && { country: dto.country.trim() }),
+        ...(dto.region && { region: dto.region.trim() }),
+      },
+    });
+  }
+
   async getProfile(distilleryId: string, userId: string) {
     const distillery = await this.prisma.distillery.findUnique({
       where: { id: distilleryId },
