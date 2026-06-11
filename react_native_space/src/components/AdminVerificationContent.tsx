@@ -7,6 +7,7 @@ import { spacing } from '../constants/theme';
 import { adminService } from '../services/admin';
 import { useAuth } from '../context/AuthContext';
 import { ADMIN_EMAIL } from '../constants/admin';
+import { pluralise } from '../utils/strings';
 
 interface UnverifiedDistillery {
   id: string;
@@ -147,7 +148,7 @@ export function AdminVerificationContent() {
       ) : (
         <>
           <Text style={styles.sectionTitle}>
-            {distilleries.length} Distiller{distilleries.length === 1 ? 'y' : 'ies'} Pending Verification
+            {pluralise(distilleries.length, 'Distillery')} Pending Verification
           </Text>
 
           {distilleries.map((distillery) => (

@@ -4,6 +4,7 @@ import { Text, Card, ProgressBar } from 'react-native-paper';
 import { TasteSummary } from '../../types';
 import { Colors } from '../../constants/colors';
 import { spacing } from '../../constants/theme';
+import { pluralise } from '../../utils/strings';
 
 interface TasteSummaryCardProps {
   tasteSummary: TasteSummary;
@@ -22,8 +23,8 @@ export const TasteSummaryCard: React.FC<TasteSummaryCardProps> = ({ tasteSummary
         </Text>
 
         <Text style={styles.summary}>
-          Explored {tasteSummary?.flavorCount ?? 0}/{tasteSummary?.maxFlavors ?? 10} flavors • 
-          {tasteSummary?.regionCount ?? 0} regions • {tasteSummary?.distilleryCount ?? 0} distilleries
+          Explored {tasteSummary?.flavorCount ?? 0}/{tasteSummary?.maxFlavors ?? 10} flavors •
+          {pluralise(tasteSummary?.regionCount ?? 0, 'region')} • {pluralise(tasteSummary?.distilleryCount ?? 0, 'distillery')}
         </Text>
 
         {/* Flavor Progress */}

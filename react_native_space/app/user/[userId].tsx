@@ -12,6 +12,7 @@ import { JourneyMapSection } from '../../src/components/gamification/JourneyMapS
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { pluralise, pluralWord } from '../../src/utils/strings';
 import { Badge, TasteSummary, Pour, User, Connection, FellowSipper } from '../../src/types';
 
 type ConnectionStatus = 'none' | 'connected' | 'pending-sent' | 'pending-received';
@@ -322,17 +323,17 @@ export default function PublicUserProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{profile?.poursCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Pours</Text>
+            <Text style={styles.statLabel}>{pluralWord(profile?.poursCount ?? 0, 'Pour')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{profile?.connectionsCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Friends</Text>
+            <Text style={styles.statLabel}>{pluralWord(profile?.connectionsCount ?? 0, 'Friend')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{profile?.cheersCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Cheers</Text>
+            <Text style={styles.statLabel}>{pluralWord(profile?.cheersCount ?? 0, 'Cheer')}</Text>
           </View>
         </View>
 
@@ -406,7 +407,7 @@ export default function PublicUserProfileScreen() {
         {/* Public Pours Section */}
         {publicPours?.length > 0 && (
           <View style={styles.poursSection}>
-            <Text style={styles.sectionTitle}>🥃 Public Pours ({publicPours.length})</Text>
+            <Text style={styles.sectionTitle}>🥃 {pluralise(publicPours.length, 'Public Pour')}</Text>
             {publicPours.map((pour) => (
               <Card key={pour?.id} style={styles.pourCard}>
                 <Card.Content>

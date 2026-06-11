@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { pluralWord } from '../../src/utils/strings';
 import { apiService } from '../../src/services/api';
 import { uploadService } from '../../src/services/upload';
 import { DistilleryProfile, DistilleryPour, DistillerySpirit } from '../../src/types/distillery';
@@ -233,7 +234,7 @@ export default function DistilleryProfileScreen() {
                 </View>
                 <View style={styles.stat}>
                   <Text style={styles.statValue}>{profile.poursCount}</Text>
-                  <Text style={styles.statLabel}>Pours</Text>
+                  <Text style={styles.statLabel}>{pluralWord(profile.poursCount ?? 0, 'Pour')}</Text>
                 </View>
               </View>
             </View>

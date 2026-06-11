@@ -4,6 +4,7 @@ import { Text, Card, List, ProgressBar } from 'react-native-paper';
 import { TasteSummary, Badge } from '../../types';
 import { Colors } from '../../constants/colors';
 import { spacing } from '../../constants/theme';
+import { pluralise } from '../../utils/strings';
 
 interface JourneyMapSectionProps {
   tasteSummary: TasteSummary;
@@ -51,7 +52,7 @@ export const JourneyMapSection: React.FC<JourneyMapSectionProps> = ({ tasteSumma
                   <Text style={styles.listLabel}>
                     {flavor?.name ?? 'Unknown'}
                   </Text>
-                  <Text style={styles.listCount}>{flavor?.count ?? 0} pours</Text>
+                  <Text style={styles.listCount}>{pluralise(flavor?.count ?? 0, 'pour')}</Text>
                 </View>
               )) ?? []}
             </View>
@@ -66,7 +67,7 @@ export const JourneyMapSection: React.FC<JourneyMapSectionProps> = ({ tasteSumma
                   <Text style={styles.listLabel}>
                     {region?.name ?? 'Unknown'}
                   </Text>
-                  <Text style={styles.listCount}>{region?.count ?? 0} pours</Text>
+                  <Text style={styles.listCount}>{pluralise(region?.count ?? 0, 'pour')}</Text>
                 </View>
               )) ?? []}
             </View>

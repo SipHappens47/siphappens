@@ -13,6 +13,7 @@ import { TasteSummaryCard } from '../../src/components/gamification/TasteSummary
 import { JourneyMapSection } from '../../src/components/gamification/JourneyMapSection';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { pluralWord } from '../../src/utils/strings';
 import { Badge, TasteSummary } from '../../src/types';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -261,17 +262,17 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{poursCount}</Text>
-            <Text style={styles.statLabel}>Pours</Text>
+            <Text style={styles.statLabel}>{pluralWord(poursCount, 'Pour')}</Text>
           </View>
           <View style={styles.statDivider} />
           <Pressable style={styles.statItem} onPress={() => router.push('/connections')}>
             <Text style={styles.statNumber}>{connectionsCount}</Text>
-            <Text style={styles.statLabel}>Friends</Text>
+            <Text style={styles.statLabel}>{pluralWord(connectionsCount, 'Friend')}</Text>
           </Pressable>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{cheersCount}</Text>
-            <Text style={styles.statLabel}>Cheers</Text>
+            <Text style={styles.statLabel}>{pluralWord(cheersCount, 'Cheer')}</Text>
           </View>
         </View>
 
