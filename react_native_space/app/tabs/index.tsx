@@ -11,10 +11,14 @@ import { UniversalSearch } from '../../src/components/UniversalSearch';
 import { DiscoverDistilleriesContent } from '../../src/components/DiscoverDistilleriesContent';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function TheBarScreen() {
-  const [activeTab, setActiveTab] = useState<'sippers' | 'distilleries'>('sippers');
+  // Allow deep links like /tabs?tab=distilleries (used by onboarding)
+  const params = useLocalSearchParams();
+  const [activeTab, setActiveTab] = useState<'sippers' | 'distilleries'>(
+    params?.tab === 'distilleries' ? 'distilleries' : 'sippers',
+  );
   const [pours, setPours] = useState<BarPour[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
