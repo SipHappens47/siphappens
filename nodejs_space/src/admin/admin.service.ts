@@ -20,9 +20,10 @@ export class AdminService {
 
   async getUnverifiedDistilleries() {
     return this.prisma.distillery.findMany({
-      where: { 
+      where: {
         verified: false,
         isclaimed: true, // Only show user-claimed distilleries
+        owneruserid: { not: null }, // A claim without an owner account isn't verifiable
       },
       select: {
         id: true,
