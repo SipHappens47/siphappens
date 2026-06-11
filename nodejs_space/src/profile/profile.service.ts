@@ -7,6 +7,88 @@ import { UpdatePhotoDto } from './dto/update-photo.dto';
 export class ProfileService {
   constructor(private prisma: PrismaService) {}
 
+  // ---- Experience level -----------------------------------------------
+  // Curious: fewer than 5 pours OR fewer than 3 unique categories
+  // Social:  5+ pours AND 3+ connections AND 50%+ shared pours
+  // Serious: 15+ pours AND 5+ unique categories AND 3+ regions
+  private async getExperienceStats(userId: string) {
+    const [pours, sharedPours, connections, pourSpirits] = await Promise.all([
+      this.prisma.pour.count({ where: { userid: userId } }),
+      this.prisma.pour.count({ where: { userid: userId, isshared: true } }),
+      this.prisma.connection.count({
+        where: { status: 'Accepted', OR: [{ initiatorid: userId }, { receiverid: userId }] },
+      }),
+      this.prisma.pour.findMany({
+        where: { userid: userId },
+        select: { spirit: { select: { category: true, region: true } } },
+      }),
+    ]);
+
+    const categories = new Set(
+      pourSpirits.map((p) => p.spirit?.category?.trim().toLowerCase()).filter(Boolean),
+    ).size;
+    const regions = new Set(
+      pourSpirits.map((p) => p.spirit?.region?.trim().toLowerCase()).filter(Boolean),
+    ).size;
+    const sharedPercent = pours > 0 ? sharedPours / pours : 0;
+
+    return { pours, sharedPours, sharedPercent, categories, regions, connections };
+  }
+
+  private levelFromStats(s: {
+    pours: number;
+    sharedPercent: number;
+    categories: number;
+    regions: number;
+    connections: number;
+  }): 'Curious' | 'Social' | 'Serious' {
+    if (s.pours >= 15 && s.categories >= 5 && s.regions >= 3) return 'Serious';
+    if (s.pours >= 5 && s.connections >= 3 && s.sharedPercent >= 0.5) return 'Social';
+    return 'Curious';
+  }
+
+  // Recalculates and persists the user's experience level. Called whenever a
+  // pour is created, a connection is accepted, or a pour's shared flag changes.
+  async calculateExperienceLevel(userId: string) {
+    try {
+      const stats = await this.getExperienceStats(userId);
+      const level = this.levelFromStats(stats);
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { experiencelevel: level },
+      });
+      return level;
+    } catch (error) {
+      // Never let level recalculation break the triggering action
+      console.error('[ProfileService] calculateExperienceLevel failed:', error);
+      return null;
+    }
+  }
+
+  async getExperienceBreakdown(userId: string) {
+    const stats = await this.getExperienceStats(userId);
+    const level = this.levelFromStats(stats);
+
+    const plural = (n: number, w: string) =>
+      `${n} more ${n === 1 ? w : /[^aeiou]y$/.test(w) ? w.slice(0, -1) + 'ies' : w + 's'}`;
+    let nextLevel: string | null = null;
+    const needs: string[] = [];
+
+    if (level === 'Curious') {
+      nextLevel = 'Social';
+      if (stats.pours < 5) needs.push(plural(5 - stats.pours, 'pour'));
+      if (stats.connections < 3) needs.push(plural(3 - stats.connections, 'connection'));
+      if (stats.sharedPercent < 0.5) needs.push('share at least half your pours');
+    } else if (level === 'Social') {
+      nextLevel = 'Serious';
+      if (stats.pours < 15) needs.push(plural(15 - stats.pours, 'pour'));
+      if (stats.categories < 5) needs.push(plural(5 - stats.categories, 'category'));
+      if (stats.regions < 3) needs.push(plural(3 - stats.regions, 'region'));
+    }
+
+    return { level, stats, nextLevel, needs };
+  }
+
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

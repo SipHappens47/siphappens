@@ -3,12 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePourDto } from './dto/create-pour.dto';
 import { UpdatePourDto } from './dto/update-pour.dto';
 import { BadgesService } from '../badges/badges.service';
+import { ProfileService } from '../profile/profile.service';
 
 @Injectable()
 export class PoursService {
   constructor(
     private prisma: PrismaService,
     private badgesService: BadgesService,
+    private profileService: ProfileService,
   ) {}
 
   async createPour(userId: string, dto: CreatePourDto) {
@@ -48,6 +50,9 @@ export class PoursService {
 
     // Check and unlock badges after creating pour
     await this.badgesService.checkAndUnlockBadges(userId);
+
+    // Pour counts feed into the experience level
+    await this.profileService.calculateExperienceLevel(userId);
 
     return this.formatPourResponse(pour);
   }
@@ -208,6 +213,11 @@ export class PoursService {
 
     // Check and unlock badges after updating pour
     await this.badgesService.checkAndUnlockBadges(userId);
+
+    // Shared ratio feeds into the experience level
+    if (dto.isShared !== undefined && dto.isShared !== existingPour.isshared) {
+      await this.profileService.calculateExperienceLevel(userId);
+    }
 
     return this.formatPourResponse(pour);
   }

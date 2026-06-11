@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProfileService } from '../profile/profile.service';
 
 @Injectable()
 export class ConnectionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private profileService: ProfileService,
+  ) {}
 
   // Search users by name or email
   async searchUsers(currentUserId: string, query: string) {
@@ -274,6 +278,10 @@ export class ConnectionsService {
         },
       },
     });
+
+    // Connection counts feed into the experience level (for both sides)
+    await this.profileService.calculateExperienceLevel(connection.initiatorid);
+    await this.profileService.calculateExperienceLevel(connection.receiverid);
 
     return this.formatConnectionResponse(updated);
   }

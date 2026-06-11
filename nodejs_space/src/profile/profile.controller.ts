@@ -19,6 +19,13 @@ export class ProfileController {
     return this.profileService.getProfile(req.user.userId);
   }
 
+  @Get('experience-breakdown')
+  @ApiOperation({ summary: 'Current experience stats and what is needed for the next level' })
+  @ApiResponse({ status: 200, description: 'Breakdown retrieved successfully' })
+  async getExperienceBreakdown(@Request() req: any) {
+    return this.profileService.getExperienceBreakdown(req.user.userId);
+  }
+
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get public user profile by ID' })
   @ApiResponse({ status: 200, description: 'Public profile retrieved successfully' })

@@ -37,6 +37,7 @@ export default function ProfileScreen() {
   const [poursCount, setPoursCount] = useState(0);
   const [connectionsCount, setConnectionsCount] = useState(0);
   const [cheersCount, setCheersCount] = useState(0);
+  const [levelHint, setLevelHint] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [tasteSummary, setTasteSummary] = useState<TasteSummary | null>(null);
@@ -77,6 +78,18 @@ export default function ProfileScreen() {
         setProfilePhotoUri(url);
       } else {
         setProfilePhotoUri(undefined);
+      }
+
+      // What the user needs for the next experience level
+      try {
+        const breakdown = await apiService.getExperienceBreakdown();
+        if (breakdown?.nextLevel && (breakdown?.needs?.length ?? 0) > 0) {
+          setLevelHint(`${breakdown.needs.join(', ')} to reach ${breakdown.nextLevel}`);
+        } else {
+          setLevelHint(null);
+        }
+      } catch {
+        setLevelHint(null); // Endpoint unavailable: just omit the hint
       }
 
       // Load badges and taste summary
@@ -298,6 +311,7 @@ export default function ProfileScreen() {
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Experience Level</Text>
             <Text style={styles.infoValue}>{experienceLevel}</Text>
+            {levelHint && <Text style={styles.levelHint}>{levelHint}</Text>}
           </View>
         </View>
 
@@ -476,6 +490,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
     fontWeight: '500',
+  },
+  levelHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 4,
   },
   versionContainer: {
     alignItems: 'center',

@@ -606,6 +606,16 @@ class ApiService {
     return response?.data ?? { isFollowing: false, followersCount: 0 };
   }
 
+  async getExperienceBreakdown(): Promise<{
+    level: string;
+    stats: { pours: number; sharedPours: number; sharedPercent: number; categories: number; regions: number; connections: number };
+    nextLevel: string | null;
+    needs: string[];
+  }> {
+    const response = await this.client.get(new URL('/api/profile/experience-breakdown', API_URL).toString());
+    return (response?.data as any) ?? { level: 'Curious', stats: {}, nextLevel: null, needs: [] };
+  }
+
   async getSpiritPourCount(spiritId: string): Promise<{ spiritId: string; pourCount: number }> {
     const response = await this.client.get(new URL(`/api/spirits/${spiritId}/pour-count`, API_URL).toString());
     return (response?.data as any) ?? { spiritId, pourCount: 0 };
