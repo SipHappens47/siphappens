@@ -18,6 +18,11 @@ export class UpdateProfileDto {
   @IsString()
   profilePhoto?: string;
 
+  @ApiProperty({ example: 'https://.../hero.jpg', required: false })
+  @IsOptional()
+  @IsString()
+  heroImage?: string;
+
   @ApiProperty({ example: 'Whisky enthusiast from Scotland', required: false })
   @IsOptional()
   @IsString()

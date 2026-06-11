@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CheersService } from './cheers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -9,6 +9,13 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @ApiBearerAuth()
 export class CheersController {
   constructor(private cheersService: CheersService) {}
+
+  @Get('received')
+  @ApiOperation({ summary: 'Recent cheers received on my pours (for notifications)' })
+  @ApiResponse({ status: 200, description: 'List of recent cheers' })
+  async getReceivedCheers(@Request() req: any) {
+    return this.cheersService.getReceivedCheers(req.user.userId);
+  }
 
   @Post(':pourId')
   @ApiOperation({ summary: 'Add a cheer to a pour (Fellow Sippers only)' })

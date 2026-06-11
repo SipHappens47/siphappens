@@ -19,6 +19,7 @@ model user {
   password                  String
   name                      String
   profilephoto              String?
+  heroimage                 String?         // Profile cover photo URL
   bio                       String?
   experiencelevel           ExperienceLevel @default(Curious)
   ageverified               Boolean         @default(false)

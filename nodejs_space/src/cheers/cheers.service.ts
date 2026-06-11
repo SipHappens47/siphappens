@@ -9,6 +9,39 @@ export class CheersService {
     private connectionsService: ConnectionsService,
   ) {}
 
+  // Recent cheers other users gave on my pours (for in-app notifications)
+  async getReceivedCheers(userId: string) {
+    const cheers = await this.prisma.cheer.findMany({
+      where: {
+        pour: { userid: userId },
+        userid: { not: userId },
+      },
+      include: {
+        user: { select: { id: true, name: true, profilephoto: true } },
+        pour: {
+          select: {
+            id: true,
+            spirit: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdat: 'desc' },
+      take: 30,
+    });
+
+    return cheers.map((c) => ({
+      id: c.id,
+      createdAt: c.createdat,
+      user: {
+        id: c.user.id,
+        name: c.user.name,
+        profilePhoto: c.user.profilephoto,
+      },
+      pourId: c.pour.id,
+      spiritName: c.pour.spirit?.name ?? 'a pour',
+    }));
+  }
+
   // Add a cheer to a pour
   async addCheer(userId: string, pourId: string) {
     // Check if pour exists and is shared
