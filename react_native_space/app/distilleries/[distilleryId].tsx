@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Image, Pressable, FlatList, Alert, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Pressable, FlatList, Alert, RefreshControl, Linking } from 'react-native';
 import { Text, Button, ActivityIndicator, FAB } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -274,19 +274,26 @@ export default function DistilleryProfileScreen() {
           )}
 
           {profile.websiteUrl && (
-            <Pressable
-              style={styles.websiteButton}
-              onPress={() => {
-                // Open website in browser
-                const url = profile.websiteUrl?.startsWith('http')
-                  ? profile.websiteUrl
-                  : `https://${profile.websiteUrl}`;
-                Alert.alert('Website', url);
-              }}
-            >
-              <MaterialCommunityIcons name="web" size={18} color={Colors.accent} />
-              <Text style={styles.websiteText}>{profile.websiteUrl}</Text>
-            </Pressable>
+            profile.isPremium ? (
+              // Clickable website link is a paid (premium) distillery feature
+              <Pressable
+                style={styles.websiteButton}
+                onPress={() => {
+                  const url = profile.websiteUrl?.startsWith('http')
+                    ? profile.websiteUrl
+                    : `https://${profile.websiteUrl}`;
+                  Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open website'));
+                }}
+              >
+                <MaterialCommunityIcons name="web" size={18} color={Colors.accent} />
+                <Text style={styles.websiteText}>{profile.websiteUrl}</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.websiteButton}>
+                <MaterialCommunityIcons name="web" size={18} color={Colors.textMuted} />
+                <Text style={styles.websiteTextMuted}>{profile.websiteUrl}</Text>
+              </View>
+            )
           )}
         </View>
 
@@ -555,6 +562,10 @@ const styles = StyleSheet.create({
   websiteText: {
     fontSize: 14,
     color: Colors.accent,
+  },
+  websiteTextMuted: {
+    fontSize: 14,
+    color: Colors.textMuted,
   },
   tabsContainer: {
     flexDirection: 'row',

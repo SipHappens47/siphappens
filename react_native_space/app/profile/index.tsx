@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Pressable, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Pressable, ActivityIndicator } from 'react-native';
 import { Text, Button, IconButton, Avatar, Dialog, Portal } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -36,7 +36,6 @@ export default function ProfileScreen() {
   const [poursCount, setPoursCount] = useState(0);
   const [connectionsCount, setConnectionsCount] = useState(0);
   const [cheersCount, setCheersCount] = useState(0);
-  const [heroImage, setHeroImage] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [tasteSummary, setTasteSummary] = useState<TasteSummary | null>(null);
@@ -71,7 +70,6 @@ export default function ProfileScreen() {
       setPoursCount(profile?.poursCount ?? 0);
       setConnectionsCount(profile?.connectionsCount ?? 0);
       setCheersCount(profile?.cheersCount ?? 0);
-      setHeroImage(profile?.heroImage ?? undefined);
       
       if (profile?.profilePhoto) {
         const url = await uploadService.getImageUrl(profile.profilePhoto, 'view');
@@ -242,11 +240,6 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Cover Photo */}
-        {heroImage && (
-          <Image source={{ uri: heroImage }} style={styles.heroBanner} resizeMode="cover" />
-        )}
-
         {/* Profile Photo Section */}
         <View style={styles.profilePhotoSection}>
           {profilePhotoUri ? (
@@ -426,12 +419,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-  },
-  heroBanner: {
-    width: '100%',
-    height: 160,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
   },
   profilePhotoSection: {
     alignItems: 'center',

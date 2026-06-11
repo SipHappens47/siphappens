@@ -18,7 +18,6 @@ export default function EditProfileScreen() {
   const [bio, setBio] = useState('');
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | undefined>();
   const [existingProfilePhotoId, setExistingProfilePhotoId] = useState<string | undefined>();
-  const [heroUri, setHeroUri] = useState<string | undefined>();
   const [experienceLevel, setExperienceLevel] = useState<'Curious' | 'Social' | 'Serious'>('Curious');
   const [menuVisible, setMenuVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,7 +41,6 @@ export default function EditProfileScreen() {
         const url = await uploadService.getImageUrl(profile.profilePhoto, 'view');
         setProfilePhotoUri(url);
       }
-      setHeroUri(profile?.heroImage ?? undefined);
     } catch (error) {
       console.error('Failed to load profile:', error);
       Alert.alert('Error', 'Failed to load profile');
@@ -71,18 +69,10 @@ export default function EditProfileScreen() {
         profilePhotoId = undefined;
       }
 
-      // Hero (cover) photo is stored as a direct public URL
-      let heroUrl = heroUri;
-      if (heroUri && !heroUri.startsWith('http')) {
-        const heroFileId = await uploadService.uploadImage(heroUri, `hero-${Date.now()}.jpg`, true);
-        heroUrl = await uploadService.getImageUrl(heroFileId, 'view');
-      }
-
       await apiService.updateProfile({
         name: name.trim(),
         bio: bio?.trim() || undefined,
         profilePhoto: profilePhotoId,
-        heroImage: heroUrl,
         experienceLevel,
       });
 
@@ -153,15 +143,6 @@ export default function EditProfileScreen() {
                 setExistingProfilePhotoId(undefined);
               }}
               label="Add Profile Photo"
-            />
-          </View>
-
-          <View style={styles.photoSection}>
-            <ImagePickerComponent
-              imageUri={heroUri}
-              onImageSelected={setHeroUri}
-              onImageRemoved={() => setHeroUri(undefined)}
-              label="Add Cover Photo"
             />
           </View>
 

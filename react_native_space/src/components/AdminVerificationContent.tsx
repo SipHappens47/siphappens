@@ -182,7 +182,8 @@ export function AdminVerificationContent() {
                 <View style={styles.ownerInfo}>
                   <MaterialCommunityIcons name="account" size={16} color={Colors.textSecondary} />
                   <Text style={styles.ownerText}>
-                    {distillery.owner.name} ({distillery.owner.email})
+                    {distillery.owner?.name ?? 'Unknown owner'}
+                    {distillery.owner?.email ? ` (${distillery.owner.email})` : ''}
                   </Text>
                 </View>
 

@@ -30,6 +30,7 @@ export interface Spirit {
   name: string;
   distilleryId?: string;
   distilleryName?: string;
+  distillery?: { id?: string; name?: string; country?: string; region?: string };
   category?: string;
   style?: string;
   abv?: number;

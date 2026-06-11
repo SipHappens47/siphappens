@@ -137,7 +137,7 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
         </View>
       </View>
 
-      {/* Tap anywhere on the post to open it */}
+      {/* Tap anywhere on the post to open it. Photo left, all details right. */}
       <Pressable onPress={() => onViewDetails(pour?.id ?? '')}>
         <Card.Content style={styles.content}>
           <View style={styles.spiritRow}>
@@ -150,6 +150,11 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
             )}
             <View style={styles.spiritInfo}>
               <Text style={styles.spiritName}>{pour?.spirit?.name ?? 'Unknown Spirit'}</Text>
+              {(pour?.spirit?.distilleryName || pour?.spirit?.distillery?.name) && (
+                <Text style={styles.distilleryName}>
+                  {pour?.spirit?.distilleryName ?? pour?.spirit?.distillery?.name}
+                </Text>
+              )}
               <View style={styles.metaRow}>
                 {pour?.spirit?.category && (
                   <Text style={styles.category}>{pour.spirit.category}</Text>
@@ -158,24 +163,24 @@ export function BarPourCard({ pour, onCheerToggle, onAddToRadar, onViewDetails, 
                   <Text style={styles.abv}>{pour.spirit.abv}% ABV</Text>
                 )}
               </View>
+
+              {pour?.whyItHit && (
+                <Text style={styles.whyItHit} numberOfLines={4}>
+                  {pour.whyItHit}
+                </Text>
+              )}
+
+              {(pour?.flavorTags?.length ?? 0) > 0 && (
+                <View style={styles.tagsContainer}>
+                  {(pour?.flavorTags ?? []).map((tag) => (
+                    <Chip key={tag?.id} style={styles.tag} textStyle={styles.tagText}>
+                      {tag?.name}
+                    </Chip>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
-
-          {/* Why It Hit */}
-          {pour?.whyItHit && (
-            <Text style={styles.whyItHit}>{pour.whyItHit}</Text>
-          )}
-
-          {/* Flavor Tags */}
-          {(pour?.flavorTags?.length ?? 0) > 0 && (
-            <View style={styles.tagsContainer}>
-              {(pour?.flavorTags ?? []).map((tag) => (
-                <Chip key={tag?.id} style={styles.tag} textStyle={styles.tagText}>
-                  {tag?.name}
-                </Chip>
-              ))}
-            </View>
-          )}
         </Card.Content>
       </Pressable>
 
@@ -303,9 +308,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sideImage: {
-    width: 110,
-    height: 130,
+    width: 140,
+    height: 190,
     borderRadius: 8,
+  },
+  distilleryName: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   spiritInfo: {
     flex: 1,
@@ -340,13 +350,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text, // Primary text for content
     lineHeight: 20,
-    marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
-    marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
   tag: {
     backgroundColor: Colors.elevated, // Subtle elevated surface
