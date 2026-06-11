@@ -600,6 +600,11 @@ class ApiService {
     return response?.data ?? { isFollowing: false, followersCount: 0 };
   }
 
+  async getSpiritPourCount(spiritId: string): Promise<{ spiritId: string; pourCount: number }> {
+    const response = await this.client.get(new URL(`/api/spirits/${spiritId}/pour-count`, API_URL).toString());
+    return (response?.data as any) ?? { spiritId, pourCount: 0 };
+  }
+
   async getReceivedCheers(): Promise<{ id: string; createdAt: string; user: { id: string; name: string; profilePhoto?: string }; pourId: string; spiritName: string }[]> {
     const response = await this.client.get(new URL('/api/cheers/received', API_URL).toString());
     return (response?.data as any) ?? [];

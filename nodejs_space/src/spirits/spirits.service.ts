@@ -237,6 +237,14 @@ export class SpiritsService {
     return spirits.map((spirit) => this.formatSpiritResponse(spirit));
   }
 
+  // Total pours of a spirit across all users (shown on radar cards)
+  async getPourCount(spiritId: string) {
+    const count = await this.prisma.pour.count({
+      where: { spiritid: spiritId },
+    });
+    return { spiritId, pourCount: count };
+  }
+
   async createDistillery(dto: CreateDistilleryDto) {
     return this.prisma.distillery.create({
       data: {

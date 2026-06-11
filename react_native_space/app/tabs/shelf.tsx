@@ -8,6 +8,7 @@ import { apiService } from '../../src/services/api';
 import { Pour, RadarEntry } from '../../src/types';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { pluralise } from '../../src/utils/strings';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 
@@ -136,20 +137,40 @@ export default function ShelfScreen() {
 
   const renderRadarEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🎯</Text>
-      <Text style={styles.emptyTitle}>No Spirits on Your Radar</Text>
+      <MaterialCommunityIcons name="radar" size={64} color={Colors.textMuted} />
+      <Text style={styles.emptyTitle}>Nothing on your radar yet</Text>
       <Text style={styles.emptyText}>
-        Explore The Bar (first tab) to discover new spirits from Fellow Sippers and add them to your wishlist.
+        Tap Add to Radar on any spirit or pour to save it here
       </Text>
+      <Pressable style={styles.emptyButton} onPress={() => router.push('/tabs')}>
+        <MaterialCommunityIcons name="magnify" size={20} color={Colors.background} />
+        <Text style={styles.emptyButtonText}>Browse spirits</Text>
+      </Pressable>
     </View>
   );
 
   const RadarItemComponent = ({ item }: { item: RadarEntry }) => {
     const [bottleImageUrl, setBottleImageUrl] = useState<string | null>(null);
+    const [pourCount, setPourCount] = useState<number | null>(null);
 
     useEffect(() => {
       loadBottleImage();
     }, [item?.spirit?.bottleImage]);
+
+    useEffect(() => {
+      let active = true;
+      (async () => {
+        try {
+          if (item?.spirit?.id) {
+            const result = await apiService.getSpiritPourCount(item.spirit.id);
+            if (active) setPourCount(result?.pourCount ?? null);
+          }
+        } catch {
+          // Endpoint unavailable: just omit the count
+        }
+      })();
+      return () => { active = false; };
+    }, [item?.spirit?.id]);
 
     const loadBottleImage = async () => {
       try {
@@ -191,6 +212,9 @@ export default function ShelfScreen() {
                 <Text style={styles.abv}>{item.spirit.abv}% ABV</Text>
               )}
             </View>
+            {pourCount !== null && pourCount > 0 && (
+              <Text style={styles.pourCount}>{pluralise(pourCount, 'pour')}</Text>
+            )}
           </View>
           <IconButton
             icon="close"
@@ -592,6 +616,11 @@ const styles = StyleSheet.create({
   abv: {
     fontSize: 12,
     color: Colors.textMuted, // Muted text
+  },
+  pourCount: {
+    fontSize: 12,
+    color: Colors.accentPressed, // Small muted gold
+    marginTop: spacing.xs,
   },
   removeButton: {
     margin: 0,

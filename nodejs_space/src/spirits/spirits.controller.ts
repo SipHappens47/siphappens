@@ -50,6 +50,15 @@ export class SpiritsController {
     return this.spiritsService.createSpirit(dto);
   }
 
+  @Get(':id/pour-count')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Total pours of this spirit across all users' })
+  @ApiResponse({ status: 200, description: 'Pour count retrieved' })
+  async getPourCount(@Param('id') id: string) {
+    return this.spiritsService.getPourCount(id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
