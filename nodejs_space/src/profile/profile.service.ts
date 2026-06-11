@@ -7,6 +7,14 @@ import { UpdatePhotoDto } from './dto/update-photo.dto';
 export class ProfileService {
   constructor(private prisma: PrismaService) {}
 
+  async savePushToken(userId: string, token: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pushtoken: token },
+    });
+    return { message: 'Push token saved' };
+  }
+
   // ---- Experience level -----------------------------------------------
   // Curious: fewer than 5 pours OR fewer than 3 unique categories
   // Social:  5+ pours AND 3+ connections AND 50%+ shared pours

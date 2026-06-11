@@ -606,6 +606,11 @@ class ApiService {
     return response?.data ?? { isFollowing: false, followersCount: 0 };
   }
 
+  async savePushToken(token: string): Promise<{ message: string }> {
+    const response = await this.client.post(new URL('/api/profile/push-token', API_URL).toString(), { token });
+    return (response?.data as any) ?? { message: '' };
+  }
+
   async getExperienceBreakdown(): Promise<{
     level: string;
     stats: { pours: number; sharedPours: number; sharedPercent: number; categories: number; regions: number; connections: number };

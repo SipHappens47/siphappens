@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionsService } from '../connections/connections.service';
+import { sendPushNotification } from '../lib/push-notifications';
 
 @Injectable()
 export class CheersService {
@@ -87,6 +88,24 @@ export class CheersService {
         pourid: pourId,
       },
     });
+
+    // Push-notify the pour owner (never blocks the cheer itself)
+    if (pour.userid !== userId) {
+      try {
+        const [cheerer, spirit] = await Promise.all([
+          this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+          this.prisma.spirit.findUnique({ where: { id: pour.spiritid }, select: { name: true } }),
+        ]);
+        await sendPushNotification(
+          pour.user?.pushtoken,
+          'Cheers! 🥂',
+          `${cheerer?.name ?? 'Someone'} cheered your ${spirit?.name ?? ''} pour`.replace('  ', ' '),
+          { type: 'cheer', pourId },
+        );
+      } catch (error) {
+        console.error('[cheers] push notification failed:', error);
+      }
+    }
 
     return {
       id: cheer.id,

@@ -1,9 +1,10 @@
-import { Controller, Get, Put, Body, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProfileService } from './profile.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePhotoDto } from './dto/update-photo.dto';
+import { PushTokenDto } from './dto/push-token.dto';
 
 @ApiTags('Profile')
 @Controller('api/profile')
@@ -45,5 +46,12 @@ export class ProfileController {
   @ApiResponse({ status: 200, description: 'Profile photo updated successfully' })
   async updatePhoto(@Request() req: any, @Body() dto: UpdatePhotoDto) {
     return this.profileService.updatePhoto(req.user.userId, dto);
+  }
+
+  @Post('push-token')
+  @ApiOperation({ summary: 'Register Expo push notification token' })
+  @ApiResponse({ status: 201, description: 'Push token saved' })
+  async savePushToken(@Request() req: any, @Body() dto: PushTokenDto) {
+    return this.profileService.savePushToken(req.user.userId, dto.token);
   }
 }

@@ -25,6 +25,7 @@ model user {
   ageverified               Boolean         @default(false)
   ageverificationtimestamp  DateTime?
   isofficial                Boolean         @default(false)  // true = SipHappens official system account
+  pushtoken                 String?         // Expo push notification token
   createdat                 DateTime        @default(now())
   
   pours                     pour[]

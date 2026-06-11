@@ -1,6 +1,45 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { authService } from '../services/auth';
+import { apiService } from '../services/api';
 import { User, AuthResponse } from '../types';
+
+// Request push permission, fetch the Expo push token and register it with the
+// backend. Fire-and-forget: any failure (denied permission, web platform,
+// missing project id) is logged and ignored.
+async function registerPushToken() {
+  try {
+    if (Platform.OS === 'web') return; // Expo push tokens need a device
+
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let status = existing;
+    if (existing !== 'granted') {
+      const request = await Notifications.requestPermissionsAsync();
+      status = request.status;
+    }
+    if (status !== 'granted') {
+      console.log('[Push] Permission not granted - skipping token registration');
+      return;
+    }
+
+    const projectId =
+      Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    const tokenResponse = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
+    const token = tokenResponse?.data;
+    if (!token) return;
+
+    await apiService.savePushToken(token);
+    await AsyncStorage.setItem('expoPushToken', token);
+    console.log('[Push] Token registered');
+  } catch (error) {
+    console.error('[Push] Token registration failed:', error);
+  }
+}
 
 interface AuthContextType {
   user: User | null;
@@ -60,6 +99,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response?.user) {
         console.log('[AuthContext] Setting user:', response.user.id);
         setUser(response.user);
+        registerPushToken(); // fire-and-forget
       } else {
         console.warn('[AuthContext] No user in response');
       }
@@ -78,6 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response?.user) {
         console.log('[AuthContext] Setting user:', response.user.id);
         setUser(response.user);
+        registerPushToken(); // fire-and-forget
       } else {
         console.warn('[AuthContext] No user in response');
       }

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProfileService } from '../profile/profile.service';
+import { sendPushNotification } from '../lib/push-notifications';
 
 @Injectable()
 export class ConnectionsService {
@@ -139,6 +140,14 @@ export class ConnectionsService {
       },
     });
 
+    // Push-notify the receiver (never blocks the request itself)
+    await sendPushNotification(
+      receiver.pushtoken,
+      'New connection request',
+      `${connection.initiator?.name ?? 'Someone'} wants to connect on SipHappens`,
+      { type: 'connectionRequest', connectionId: connection.id },
+    );
+
     return this.formatConnectionResponse(connection);
   }
 
@@ -231,6 +240,14 @@ export class ConnectionsService {
         },
       },
     });
+
+    // Push-notify the receiver (never blocks the request itself)
+    await sendPushNotification(
+      receiver.pushtoken,
+      'New connection request',
+      `${connection.initiator?.name ?? 'Someone'} wants to connect on SipHappens`,
+      { type: 'connectionRequest', connectionId: connection.id },
+    );
 
     return this.formatConnectionResponse(connection);
   }
