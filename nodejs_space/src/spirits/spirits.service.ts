@@ -165,6 +165,34 @@ export class SpiritsService {
     return this.formatSpiritResponse(spirit);
   }
 
+  // Resolve an AI-identified bottle to a catalog spirit. Matching is fuzzy in
+  // both directions ("Rhum Tipo Tinto" should find "Tipo Tinto" and vice
+  // versa), preferring exact names, matching distilleries and closer lengths.
+  async resolveSpirit(name: string, distilleryName: string | undefined, requestingUserId?: string) {
+    const query = name?.trim();
+    if (!query) return { found: false };
+
+    const rows: { id: string }[] = await this.prisma.$queryRaw`
+      SELECT s.id
+      FROM public.spirit s
+      LEFT JOIN public.distillery d ON s.distilleryid = d.id
+      WHERE lower(s.name) = lower(${query})
+         OR s.name ILIKE '%' || ${query} || '%'
+         OR ${query} ILIKE '%' || s.name || '%'
+      ORDER BY
+        (lower(s.name) = lower(${query})) DESC,
+        (d.name IS NOT NULL AND lower(d.name) = lower(${distilleryName ?? ''})) DESC,
+        abs(length(s.name) - length(${query})) ASC
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) {
+      return { found: false };
+    }
+    const spirit = await this.getSpirit(rows[0].id, requestingUserId);
+    return { found: true, spirit };
+  }
+
   async getSpirit(id: string, requestingUserId?: string) {
     const spirit = await this.prisma.spirit.findUnique({
       where: { id },

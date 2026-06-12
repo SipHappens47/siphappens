@@ -621,6 +621,14 @@ class ApiService {
     return (response?.data as any) ?? { level: 'Curious', stats: {}, nextLevel: null, needs: [] };
   }
 
+  async resolveSpirit(name: string, distillery?: string): Promise<{ found: boolean; spirit?: Spirit }> {
+    const url = new URL('/api/spirits/resolve', API_URL);
+    url.searchParams.set('name', name);
+    if (distillery) url.searchParams.set('distillery', distillery);
+    const response = await this.client.get(url.toString());
+    return (response?.data as any) ?? { found: false };
+  }
+
   async getSpiritPourCount(spiritId: string): Promise<{ spiritId: string; pourCount: number }> {
     const response = await this.client.get(new URL(`/api/spirits/${spiritId}/pour-count`, API_URL).toString());
     return (response?.data as any) ?? { spiritId, pourCount: 0 };

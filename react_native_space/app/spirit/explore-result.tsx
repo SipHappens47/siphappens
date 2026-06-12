@@ -71,21 +71,14 @@ export default function ExploreResultScreen() {
       if (params?.imageUri) setImageUri(params.imageUri as string);
       if (!firstMatch?.spiritName) return;
 
-      // Try to find this spirit in our catalog by name (+ distillery when possible)
-      const results = await apiService.searchSpirits(firstMatch.spiritName);
-      const nameLower = firstMatch.spiritName.trim().toLowerCase();
-      const distLower = firstMatch.distilleryName?.trim().toLowerCase() ?? '';
-      const best =
-        (results ?? []).find(
-          (s) =>
-            s?.name?.trim().toLowerCase() === nameLower &&
-            (!distLower || (s?.distilleryName ?? '').toLowerCase() === distLower),
-        ) ?? (results ?? []).find((s) => s?.name?.trim().toLowerCase() === nameLower);
-
-      if (best?.id) {
-        // Fetch the full record including community stats
-        const full = await apiService.getSpirit(best.id);
-        setCatalogSpirit(full ?? null);
+      // Fuzzy-resolve the AI-identified name against our catalog on the backend
+      // (handles "Rhum Tipo Tinto" vs "Tipo Tinto" style mismatches).
+      const resolved = await apiService.resolveSpirit(
+        firstMatch.spiritName,
+        firstMatch.distilleryName,
+      );
+      if (resolved?.found && resolved.spirit) {
+        setCatalogSpirit(resolved.spirit);
       }
     } catch (error) {
       console.error('Failed to resolve spirit:', error);

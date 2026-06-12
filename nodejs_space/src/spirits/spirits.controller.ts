@@ -41,6 +41,21 @@ export class SpiritsController {
     return this.spiritsService.searchSpirits(query);
   }
 
+  @Get('resolve')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resolve an AI-identified bottle name to a catalog spirit (fuzzy)' })
+  @ApiQuery({ name: 'name', required: true })
+  @ApiQuery({ name: 'distillery', required: false })
+  @ApiResponse({ status: 200, description: 'Resolution result' })
+  async resolveSpirit(
+    @Query('name') name: string,
+    @Query('distillery') distillery: string,
+    @Request() req: any,
+  ) {
+    return this.spiritsService.resolveSpirit(name, distillery, req.user.userId);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
