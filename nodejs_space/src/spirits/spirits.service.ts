@@ -35,7 +35,12 @@ export class SpiritsService {
         this.logger.error('GEMINI_API_KEY is not set');
         throw new Error('Bottle recognition is not configured');
       }
-      const model = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+      // Each model has its own free-tier daily quota, so falling back to a
+      // second model when the first is exhausted doubles the free scans.
+      const models = [
+        (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim(),
+        (process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash-lite').trim(),
+      ];
 
       const prompt =
         'You are identifying a bottle of spirits from a photo. Respond ONLY with JSON of the form ' +
@@ -47,7 +52,6 @@ export class SpiritsService {
         'If the image is not a spirit bottle or you cannot identify it, return {"matches":[]}.';
 
       // Google Gemini (generativelanguage API). Provider isolated to this method so it can be swapped.
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const reqBody = JSON.stringify({
         contents: [
           { parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: base64Image } }] },
@@ -55,27 +59,41 @@ export class SpiritsService {
         generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
       });
 
-      // Gemini occasionally returns 503 (overloaded) or 429 (rate); retry a few times with backoff.
-      const maxAttempts = 4;
-      let data: any;
-      for (let attempt = 1; ; attempt++) {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: reqBody,
-        });
-        if (response.ok) {
-          data = await response.json();
-          break;
+      // Per model: retry transient 503s briefly, then move to the next model.
+      // Quota errors (429) skip straight to the next model — they won't clear
+      // by waiting a few seconds.
+      const attemptsPerModel = 2;
+      let data: any = null;
+      let lastError = '';
+      outer: for (const model of models) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        for (let attempt = 1; attempt <= attemptsPerModel; attempt++) {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody,
+          });
+          if (response.ok) {
+            data = await response.json();
+            break outer;
+          }
+          lastError = await response.text();
+          if (response.status === 429) {
+            this.logger.warn(`Gemini ${model} quota hit (429), trying next model`);
+            break; // next model
+          }
+          if ((response.status === 503 || response.status >= 500) && attempt < attemptsPerModel) {
+            this.logger.warn(`Gemini ${model} ${response.status}, retrying (${attempt}/${attemptsPerModel})`);
+            await new Promise((r) => setTimeout(r, attempt * 1500));
+            continue;
+          }
+          this.logger.warn(`Gemini ${model} failed (${response.status}), trying next model`);
+          break; // next model
         }
-        const errorText = await response.text();
-        const retryable = response.status === 503 || response.status === 429 || response.status >= 500;
-        if (retryable && attempt < maxAttempts) {
-          this.logger.warn(`Gemini ${response.status}, retrying (${attempt}/${maxAttempts})`);
-          await new Promise((r) => setTimeout(r, attempt * 1500));
-          continue;
-        }
-        this.logger.error('Gemini API error:', errorText);
+      }
+
+      if (!data) {
+        this.logger.error('Gemini API error (all models):', lastError);
         throw new Error('Failed to analyze bottle image');
       }
 
