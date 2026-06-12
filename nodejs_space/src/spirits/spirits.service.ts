@@ -165,7 +165,7 @@ export class SpiritsService {
     return this.formatSpiritResponse(spirit);
   }
 
-  async getSpirit(id: string) {
+  async getSpirit(id: string, requestingUserId?: string) {
     const spirit = await this.prisma.spirit.findUnique({
       where: { id },
       include: {
@@ -182,7 +182,49 @@ export class SpiritsService {
       throw new NotFoundException('Spirit not found');
     }
 
-    return this.formatSpiritResponse(spirit);
+    // Community stats for the Explore flow
+    const [totalPourCount, ratingAgg] = await Promise.all([
+      this.prisma.pour.count({ where: { spiritid: id } }),
+      this.prisma.pour.aggregate({
+        where: { spiritid: id, rating: { not: null } },
+        _avg: { rating: true },
+      }),
+    ]);
+
+    // Fellow Sippers of the requesting user who have poured this spirit
+    let fellowSipperPours: { userId: string; userName: string; profilePhoto: string | null }[] = [];
+    if (requestingUserId) {
+      const connections = await this.prisma.connection.findMany({
+        where: {
+          status: 'Accepted',
+          OR: [{ initiatorid: requestingUserId }, { receiverid: requestingUserId }],
+        },
+        select: { initiatorid: true, receiverid: true },
+      });
+      const friendIds = connections.map((c) =>
+        c.initiatorid === requestingUserId ? c.receiverid : c.initiatorid,
+      );
+      if (friendIds.length > 0) {
+        const friendPours = await this.prisma.pour.findMany({
+          where: { spiritid: id, userid: { in: friendIds } },
+          select: { user: { select: { id: true, name: true, profilephoto: true } } },
+          distinct: ['userid'],
+        });
+        fellowSipperPours = friendPours.map((p) => ({
+          userId: p.user.id,
+          userName: p.user.name,
+          profilePhoto: p.user.profilephoto,
+        }));
+      }
+    }
+
+    return {
+      ...this.formatSpiritResponse(spirit),
+      totalPourCount,
+      averageRating:
+        ratingAgg._avg.rating != null ? Math.round(ratingAgg._avg.rating * 10) / 10 : null,
+      fellowSipperPours,
+    };
   }
 
   async updateSpirit(id: string, dto: UpdateSpiritDto) {
@@ -303,14 +345,19 @@ export class SpiritsService {
       abv: spirit.abv ? parseFloat(spirit.abv.toString()) : null,
       region: spirit.region,
       bottleImage: spirit.bottleimage,
+      officialTastingNotes: spirit.officialtastingnotes,
       createdAt: spirit.createdat,
-      distillery: {
-        id: spirit.distillery.id,
-        name: spirit.distillery.name,
-        country: spirit.distillery.country,
-        region: spirit.distillery.region,
-      },
-      flavorTags: spirit.flavortags.map((ft: any) => ({
+      distilleryId: spirit.distillery?.id,
+      distilleryName: spirit.distillery?.name,
+      distillery: spirit.distillery
+        ? {
+            id: spirit.distillery.id,
+            name: spirit.distillery.name,
+            country: spirit.distillery.country,
+            region: spirit.distillery.region,
+          }
+        : null,
+      flavorTags: (spirit.flavortags ?? []).map((ft: any) => ({
         id: ft.flavortag.id,
         name: ft.flavortag.name,
       })),

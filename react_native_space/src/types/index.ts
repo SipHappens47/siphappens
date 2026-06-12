@@ -36,8 +36,13 @@ export interface Spirit {
   abv?: number;
   region?: string;
   bottleImage?: string;
+  officialTastingNotes?: string | null;
   flavorTags?: FlavorTag[];
   createdAt: string;
+  // Community stats (returned by GET /api/spirits/:id)
+  totalPourCount?: number;
+  averageRating?: number | null;
+  fellowSipperPours?: { userId: string; userName: string; profilePhoto?: string | null }[];
 }
 
 export interface Pour {

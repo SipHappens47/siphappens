@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SpiritsService } from './spirits.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -62,11 +62,12 @@ export class SpiritsController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get spirit details by ID' })
+  @ApiOperation({ summary: 'Get spirit details by ID (incl. community stats)' })
   @ApiResponse({ status: 200, description: 'Spirit details retrieved' })
   @ApiResponse({ status: 404, description: 'Spirit not found' })
-  async getSpirit(@Param('id') id: string) {
-    return this.spiritsService.getSpirit(id);
+  async getSpirit(@Param('id') id: string, @Request() req: any) {
+    // Identity comes from the JWT (not a query param) so connections can't be spoofed
+    return this.spiritsService.getSpirit(id, req.user.userId);
   }
 
   @Put(':id')
