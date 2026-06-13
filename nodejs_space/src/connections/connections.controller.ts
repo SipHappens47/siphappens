@@ -47,10 +47,17 @@ export class ConnectionsController {
   }
 
   @Get('pending')
-  @ApiOperation({ summary: 'Get pending connection requests' })
+  @ApiOperation({ summary: 'Get pending connection requests (received)' })
   @ApiResponse({ status: 200, description: 'List of pending requests' })
   async getPendingRequests(@Request() req: any) {
     return this.connectionsService.getPendingRequests(req.user.userId);
+  }
+
+  @Get('sent')
+  @ApiOperation({ summary: 'Get pending connection requests this user has sent' })
+  @ApiResponse({ status: 200, description: 'List of sent pending requests' })
+  async getSentRequests(@Request() req: any) {
+    return this.connectionsService.getSentRequests(req.user.userId);
   }
 
   @Get()

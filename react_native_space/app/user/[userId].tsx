@@ -49,13 +49,14 @@ export default function PublicUserProfileScreen() {
       const userIdString = Array.isArray(userId) ? userId[0] : userId;
       console.log('[PublicProfile] Loading user profile for:', userIdString);
       
-      const [profileData, badgesData, tasteSummaryData, poursData, connections, pendingRequests] = await Promise.all([
+      const [profileData, badgesData, tasteSummaryData, poursData, connections, pendingRequests, sentRequests] = await Promise.all([
         apiService.getPublicProfile(userIdString),
         apiService.getPublicUserBadges(userIdString),
         apiService.getPublicUserTasteSummary(userIdString),
         apiService.getUserPublicPours(userIdString),
         apiService.getConnections(),
         apiService.getPendingRequests(),
+        apiService.getSentRequests(),
       ]);
       
       console.log('[PublicProfile] Profile data:', profileData);
@@ -87,16 +88,19 @@ export default function PublicUserProfileScreen() {
         setConnectionStatus('connected');
         setConnectionId(connection?.connectionId ?? null);
       } else {
-        // Check if there's a pending request
-        const pendingSent = (pendingRequests ?? []).find(
-          (conn: Connection) => 
+        // Check if there's a pending request. Sent requests come from the
+        // dedicated /sent endpoint (the /pending endpoint only returns ones we
+        // received), so a request we sent correctly shows as "pending-sent"
+        // when we return to this profile — preventing a duplicate send.
+        const pendingSent = (sentRequests ?? []).find(
+          (conn: Connection) =>
             conn?.receiver?.id === userIdString && conn?.status?.toLowerCase() === 'pending'
         );
         const pendingReceived = (pendingRequests ?? []).find(
-          (conn: Connection) => 
+          (conn: Connection) =>
             conn?.initiator?.id === userIdString && conn?.status?.toLowerCase() === 'pending'
         );
-        
+
         if (pendingSent) {
           setConnectionStatus('pending-sent');
           setConnectionId(pendingSent?.id ?? null);

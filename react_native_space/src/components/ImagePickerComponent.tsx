@@ -20,25 +20,28 @@ export const ImagePickerComponent: React.FC<ImagePickerComponentProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
 
-  const requestPermission = async () => {
-    if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant photo library access to select images.'
-        );
-        return false;
-      }
+  // Ask whether to use the camera or the gallery, then launch that source.
+  const pickImage = () => {
+    if (Platform.OS === 'web') {
+      pickFromLibrary();
+      return;
     }
-    return true;
+    Alert.alert('Add Photo', 'Choose where to get the photo from', [
+      { text: 'Take Photo', onPress: pickFromCamera },
+      { text: 'Choose from Gallery', onPress: pickFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
-  const pickImage = async () => {
+  const pickFromLibrary = async () => {
     try {
-      const hasPermission = await requestPermission();
-      if (!hasPermission) return;
-
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Please grant photo library access to select images.');
+          return;
+        }
+      }
       setLoading(true);
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -46,13 +49,36 @@ export const ImagePickerComponent: React.FC<ImagePickerComponentProps> = ({
         aspect: [4, 3],
         quality: 0.8,
       });
-
       if (!result?.canceled && result?.assets?.[0]?.uri) {
         onImageSelected?.(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pickFromCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant camera access to take a photo.');
+        return;
+      }
+      setLoading(true);
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result?.canceled && result?.assets?.[0]?.uri) {
+        onImageSelected?.(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      Alert.alert('Error', 'Failed to take photo');
     } finally {
       setLoading(false);
     }

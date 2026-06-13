@@ -380,6 +380,13 @@ class ApiService {
     return response?.data ?? [];
   }
 
+  async getSentRequests(): Promise<Connection[]> {
+    const response = await this.client.get<Connection[]>(
+      new URL('/api/connections/sent', API_URL).toString()
+    );
+    return response?.data ?? [];
+  }
+
   async getConnections(): Promise<FellowSipper[]> {
     const response = await this.client.get<FellowSipper[]>(
       new URL('/api/connections', API_URL).toString()

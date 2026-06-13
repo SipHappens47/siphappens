@@ -358,6 +358,28 @@ export class ConnectionsService {
     return requests.map((req) => this.formatConnectionResponse(req));
   }
 
+  // Get pending connection requests this user has SENT (so their UI can show
+  // "Request Pending" and prevent sending a duplicate).
+  async getSentRequests(userId: string) {
+    const requests = await this.prisma.connection.findMany({
+      where: {
+        initiatorid: userId,
+        status: 'Pending',
+      },
+      include: {
+        initiator: {
+          select: { id: true, name: true, profilephoto: true, experiencelevel: true },
+        },
+        receiver: {
+          select: { id: true, name: true, profilephoto: true, experiencelevel: true },
+        },
+      },
+      orderBy: { createdat: 'desc' },
+    });
+
+    return requests.map((req) => this.formatConnectionResponse(req));
+  }
+
   // Get all connections (mutual connections)
   async getConnections(userId: string) {
     const connections = await this.prisma.connection.findMany({
