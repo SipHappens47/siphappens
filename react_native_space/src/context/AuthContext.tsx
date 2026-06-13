@@ -7,12 +7,33 @@ import { authService } from '../services/auth';
 import { apiService } from '../services/api';
 import { User, AuthResponse } from '../types';
 
+// Show notifications even when the app is foregrounded (banner + sound).
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 // Request push permission, fetch the Expo push token and register it with the
 // backend. Fire-and-forget: any failure (denied permission, web platform,
 // missing project id) is logged and ignored.
 async function registerPushToken() {
   try {
     if (Platform.OS === 'web') return; // Expo push tokens need a device
+
+    // Android requires a notification channel for notifications to display.
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#C6A85C',
+      });
+    }
 
     const { status: existing } = await Notifications.getPermissionsAsync();
     let status = existing;

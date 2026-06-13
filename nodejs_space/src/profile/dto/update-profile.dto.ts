@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 enum ExperienceLevel {
@@ -32,4 +32,9 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsEnum(ExperienceLevel)
   experienceLevel?: ExperienceLevel;
+
+  @ApiProperty({ example: true, required: false, description: 'Let others follow instantly (skip approval)' })
+  @IsOptional()
+  @IsBoolean()
+  allowInstantFollow?: boolean;
 }

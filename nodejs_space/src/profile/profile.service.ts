@@ -109,6 +109,7 @@ export class ProfileService {
         bio: true,
         experiencelevel: true,
         ageverified: true,
+        allowinstantfollow: true,
         createdat: true,
         owneddistillery: {
           select: {
@@ -155,6 +156,7 @@ export class ProfileService {
       bio: displayBio,
       experienceLevel: user.experiencelevel,
       ageVerified: user.ageverified,
+      allowInstantFollow: user.allowinstantfollow,
       createdAt: user.createdat,
       poursCount,
       connectionsCount,
@@ -171,6 +173,7 @@ export class ProfileService {
         ...(dto.heroImage !== undefined && { heroimage: dto.heroImage }),
         ...(dto.bio !== undefined && { bio: dto.bio }),
         ...(dto.experienceLevel && { experiencelevel: dto.experienceLevel }),
+        ...(dto.allowInstantFollow !== undefined && { allowinstantfollow: dto.allowInstantFollow }),
       },
       select: {
         id: true,
@@ -180,6 +183,7 @@ export class ProfileService {
         bio: true,
         experiencelevel: true,
         ageverified: true,
+        allowinstantfollow: true,
         createdat: true,
       },
     });
@@ -192,6 +196,7 @@ export class ProfileService {
       bio: user.bio,
       experienceLevel: user.experiencelevel,
       ageVerified: user.ageverified,
+      allowInstantFollow: user.allowinstantfollow,
       createdAt: user.createdat,
     };
   }
@@ -240,6 +245,7 @@ export class ProfileService {
           bio: true,
           experiencelevel: true,
           isofficial: true,
+          allowinstantfollow: true,
           createdat: true,
         },
       });
@@ -268,6 +274,7 @@ export class ProfileService {
         bio: user.bio,
         experienceLevel: user.experiencelevel,
         isOfficial: user.isofficial ?? false,
+        allowInstantFollow: user.allowinstantfollow ?? false,
         createdAt: user.createdat,
         poursCount,
         connectionsCount,

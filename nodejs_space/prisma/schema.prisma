@@ -26,6 +26,7 @@ model user {
   ageverificationtimestamp  DateTime?
   isofficial                Boolean         @default(false)  // true = SipHappens official system account
   pushtoken                 String?         // Expo push notification token
+  allowinstantfollow        Boolean         @default(false)  // Skip approval: others follow instantly
   createdat                 DateTime        @default(now())
   
   pours                     pour[]

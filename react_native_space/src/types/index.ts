@@ -7,6 +7,8 @@ export interface User {
   bio?: string;
   experienceLevel?: 'Curious' | 'Social' | 'Serious';
   ageVerified: boolean;
+  allowInstantFollow?: boolean;
+  isOfficial?: boolean;
   createdAt: string;
   poursCount?: number;
   connectionsCount?: number;

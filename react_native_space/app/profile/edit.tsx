@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { Text, TextInput, Button, Menu, Divider, IconButton } from 'react-native-paper';
+import { Text, TextInput, Button, Menu, Divider, IconButton, Switch } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
@@ -19,6 +19,7 @@ export default function EditProfileScreen() {
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | undefined>();
   const [existingProfilePhotoId, setExistingProfilePhotoId] = useState<string | undefined>();
   const [experienceLevel, setExperienceLevel] = useState<'Curious' | 'Social' | 'Serious'>('Curious');
+  const [allowInstantFollow, setAllowInstantFollow] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,8 @@ export default function EditProfileScreen() {
       setName(profile?.name ?? '');
       setBio(profile?.bio ?? '');
       setExperienceLevel((profile?.experienceLevel as any) ?? 'Curious');
-      
+      setAllowInstantFollow(profile?.allowInstantFollow ?? false);
+
       if (profile?.profilePhoto) {
         setExistingProfilePhotoId(profile.profilePhoto);
         const url = await uploadService.getImageUrl(profile.profilePhoto, 'view');
@@ -74,6 +76,7 @@ export default function EditProfileScreen() {
         bio: bio?.trim() || undefined,
         profilePhoto: profilePhotoId,
         experienceLevel,
+        allowInstantFollow,
       });
 
       await refreshUser();
@@ -206,6 +209,21 @@ export default function EditProfileScreen() {
               />
             </Menu>
 
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTextWrap}>
+                <Text style={styles.toggleTitle}>Instant follow</Text>
+                <Text style={styles.toggleDescription}>
+                  Let fellow sippers follow you without approval. Off means they
+                  send a request you approve.
+                </Text>
+              </View>
+              <Switch
+                value={allowInstantFollow}
+                onValueChange={setAllowInstantFollow}
+                color={Colors.accent}
+              />
+            </View>
+
             <Button
               mode="contained"
               onPress={handleSave}
@@ -276,6 +294,30 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: Colors.surface, // Card surface for inputs
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  toggleTextWrap: {
+    flex: 1,
+  },
+  toggleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  toggleDescription: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    lineHeight: 17,
   },
   button: {
     marginTop: spacing.md,

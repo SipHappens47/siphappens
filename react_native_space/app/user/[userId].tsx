@@ -129,9 +129,17 @@ export default function PublicUserProfileScreen() {
     try {
       setActionLoading(true);
       const userIdString = Array.isArray(userId) ? userId[0] : userId;
-      await apiService.sendConnectionRequestById(userIdString);
-      setConnectionStatus('pending-sent');
-      Alert.alert('Success', 'Connection request sent!');
+      const connection = await apiService.sendConnectionRequestById(userIdString);
+      // If the target allows instant follow, the backend returns an already-
+      // Accepted connection — reflect that instead of a pending request.
+      if (connection?.status?.toLowerCase() === 'accepted') {
+        setConnectionStatus('connected');
+        setConnectionId(connection?.id ?? null);
+        Alert.alert('Following 🥃', `You're now following ${profile?.name ?? 'this sipper'}.`);
+      } else {
+        setConnectionStatus('pending-sent');
+        Alert.alert('Request sent', 'Your follow request was sent.');
+      }
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message ?? 'Failed to send request');
     } finally {
@@ -225,7 +233,7 @@ export default function PublicUserProfileScreen() {
             contentStyle={styles.buttonContent}
             icon="check"
           >
-            Connected
+            Following
           </Button>
         );
       case 'pending-sent':
@@ -248,7 +256,7 @@ export default function PublicUserProfileScreen() {
             contentStyle={styles.buttonContent}
             icon="account-plus"
           >
-            Accept Request
+            Accept Follow
           </Button>
         );
       case 'none':
@@ -261,7 +269,7 @@ export default function PublicUserProfileScreen() {
             contentStyle={styles.buttonContent}
             icon="account-plus"
           >
-            Send Connection Request
+            {profile?.allowInstantFollow ? 'Follow' : 'Follow (request)'}
           </Button>
         );
     }

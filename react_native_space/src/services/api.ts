@@ -156,7 +156,7 @@ class ApiService {
     return response?.data ?? {} as User;
   }
 
-  async updateProfile(data: { name?: string; profilePhoto?: string; heroImage?: string; bio?: string; experienceLevel?: string }): Promise<User> {
+  async updateProfile(data: { name?: string; profilePhoto?: string; heroImage?: string; bio?: string; experienceLevel?: string; allowInstantFollow?: boolean }): Promise<User> {
     const response = await this.client.put<User>(new URL('/api/profile', API_URL).toString(), data);
     return response?.data ?? {} as User;
   }

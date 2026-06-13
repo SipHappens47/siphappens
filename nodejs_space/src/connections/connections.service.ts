@@ -113,40 +113,46 @@ export class ConnectionsService {
       }
     }
 
-    // Create connection request
+    return this.createConnectionFor(initiatorId, receiver);
+  }
+
+  // Creates the connection honoring the receiver's instant-follow setting:
+  // - instant-follow on  -> Accepted immediately (no approval), notify "started following"
+  // - instant-follow off -> Pending request, notify "wants to follow"
+  private async createConnectionFor(initiatorId: string, receiver: any) {
+    const instant = receiver.allowinstantfollow === true;
+
     const connection = await this.prisma.connection.create({
       data: {
         initiatorid: initiatorId,
         receiverid: receiver.id,
-        status: 'Pending',
+        status: instant ? 'Accepted' : 'Pending',
+        ...(instant && { acceptedat: new Date() }),
       },
       include: {
-        initiator: {
-          select: {
-            id: true,
-            name: true,
-            profilephoto: true,
-            experiencelevel: true,
-          },
-        },
-        receiver: {
-          select: {
-            id: true,
-            name: true,
-            profilephoto: true,
-            experiencelevel: true,
-          },
-        },
+        initiator: { select: { id: true, name: true, profilephoto: true, experiencelevel: true } },
+        receiver: { select: { id: true, name: true, profilephoto: true, experiencelevel: true } },
       },
     });
 
-    // Push-notify the receiver (never blocks the request itself)
-    await sendPushNotification(
-      receiver.pushtoken,
-      'New connection request',
-      `${connection.initiator?.name ?? 'Someone'} wants to connect on SipHappens`,
-      { type: 'connectionRequest', connectionId: connection.id },
-    );
+    if (instant) {
+      // A new accepted connection affects both users' experience level
+      await this.profileService.calculateExperienceLevel(initiatorId);
+      await this.profileService.calculateExperienceLevel(receiver.id);
+      await sendPushNotification(
+        receiver.pushtoken,
+        'New follower 🥃',
+        `${connection.initiator?.name ?? 'Someone'} started following you on SipHappens`,
+        { type: 'follow', connectionId: connection.id },
+      );
+    } else {
+      await sendPushNotification(
+        receiver.pushtoken,
+        'New follow request',
+        `${connection.initiator?.name ?? 'Someone'} wants to follow you on SipHappens`,
+        { type: 'connectionRequest', connectionId: connection.id },
+      );
+    }
 
     return this.formatConnectionResponse(connection);
   }
@@ -214,42 +220,7 @@ export class ConnectionsService {
       }
     }
 
-    // Create connection request
-    const connection = await this.prisma.connection.create({
-      data: {
-        initiatorid: initiatorId,
-        receiverid: receiver.id,
-        status: 'Pending',
-      },
-      include: {
-        initiator: {
-          select: {
-            id: true,
-            name: true,
-            profilephoto: true,
-            experiencelevel: true,
-          },
-        },
-        receiver: {
-          select: {
-            id: true,
-            name: true,
-            profilephoto: true,
-            experiencelevel: true,
-          },
-        },
-      },
-    });
-
-    // Push-notify the receiver (never blocks the request itself)
-    await sendPushNotification(
-      receiver.pushtoken,
-      'New connection request',
-      `${connection.initiator?.name ?? 'Someone'} wants to connect on SipHappens`,
-      { type: 'connectionRequest', connectionId: connection.id },
-    );
-
-    return this.formatConnectionResponse(connection);
+    return this.createConnectionFor(initiatorId, receiver);
   }
 
   // Accept connection request

@@ -80,6 +80,12 @@
         {
           "photosPermission": "Allow SipHappens to access your photos to select bottle images."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#C6A85C"
+        }
       ]
     ],
     "experiments": {
