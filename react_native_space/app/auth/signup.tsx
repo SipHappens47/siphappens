@@ -19,6 +19,7 @@ export default function SignupScreen() {
   // Common fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [ageVerified, setAgeVerified] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -396,7 +397,13 @@ export default function SignupScreen() {
                 onChangeText={setPassword}
                 mode="outlined"
                 style={styles.input}
-                secureTextEntry
+                secureTextEntry={!showPassword}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? 'eye-off' : 'eye'}
+                    onPress={() => setShowPassword((s) => !s)}
+                  />
+                }
                 error={!!errors?.password}
                 dense={isSmallScreen}
               />

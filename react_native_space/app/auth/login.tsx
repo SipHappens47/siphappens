@@ -10,6 +10,7 @@ import { spacing } from '../../src/constants/theme';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   
@@ -108,7 +109,13 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               mode="outlined"
               style={styles.input}
-              secureTextEntry
+              secureTextEntry={!showPassword}
+              right={
+                <TextInput.Icon
+                  icon={showPassword ? 'eye-off' : 'eye'}
+                  onPress={() => setShowPassword((s) => !s)}
+                />
+              }
               error={!!errors?.password}
             />
             {errors?.password && <Text style={styles.errorText}>{errors.password}</Text>}
