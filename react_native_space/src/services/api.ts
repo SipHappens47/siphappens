@@ -18,6 +18,8 @@ console.log('='.repeat(60));
 
 class ApiService {
   private client: AxiosInstance;
+  // Monotonic id for pairing each request with its warming-overlay start/end.
+  private static warmingSeq = 0;
 
   constructor() {
     console.log('[ApiService] Initializing with API_URL:', API_URL);
@@ -36,11 +38,20 @@ class ApiService {
       async (config) => {
         console.log('[ApiService] Request:', config.method?.toUpperCase(), config.url);
         // If this request takes >3s the server is likely cold-starting:
-        // show the global warming overlay until it responds.
+        // show the global warming overlay until it responds. Each request gets
+        // a unique id so the overlay state can't drift, plus a safety timeout
+        // that force-ends it after 75s in case the response is never seen
+        // (e.g. a network error with no config to clear) — so the overlay can
+        // never outlive the request that triggered it.
+        const warmingId = ++ApiService.warmingSeq;
+        (config as any).__warmingId = warmingId;
         (config as any).__warmingTimer = setTimeout(() => {
           (config as any).__warmingShown = true;
-          warmingStart();
+          warmingStart(warmingId);
         }, 3000);
+        (config as any).__warmingSafety = setTimeout(() => {
+          warmingEnd(warmingId);
+        }, 75000);
         try {
           const token = Platform.OS === 'web'
             ? await AsyncStorage.getItem('authToken')
@@ -61,11 +72,12 @@ class ApiService {
     );
 
     const clearWarming = (config: any) => {
-      if (config?.__warmingTimer) clearTimeout(config.__warmingTimer);
-      if (config?.__warmingShown) {
-        config.__warmingShown = false;
-        warmingEnd();
-      }
+      if (!config) return;
+      if (config.__warmingTimer) clearTimeout(config.__warmingTimer);
+      if (config.__warmingSafety) clearTimeout(config.__warmingSafety);
+      // warmingEnd is idempotent, so calling it even when the overlay was
+      // never shown (request finished under 3s) is harmless.
+      if (config.__warmingId != null) warmingEnd(config.__warmingId);
     };
 
     this.client.interceptors.response.use(

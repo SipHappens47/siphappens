@@ -5,26 +5,31 @@ import { Colors } from '../constants/colors';
 import { spacing } from '../constants/theme';
 
 // --- Global warming state -------------------------------------------------
-// api.ts calls warmingStart()/warmingEnd() around slow requests; the overlay
-// is visible while at least one slow request is in flight.
+// api.ts calls warmingStart(id)/warmingEnd(id) around slow requests; the
+// overlay is visible while at least one slow request is in flight.
+//
+// We track in-flight requests by id (not a raw counter) so a duplicated or
+// missing end can't make the count drift positive and leave the overlay stuck
+// over the screen forever — warmingEnd is idempotent, and api.ts also pairs
+// every start with a safety timeout so nothing can keep the overlay up
+// longer than the request itself.
 type Listener = (visible: boolean) => void;
 
-let slowRequestCount = 0;
+const activeIds = new Set<number>();
 const listeners = new Set<Listener>();
 
 function emit() {
-  const visible = slowRequestCount > 0;
+  const visible = activeIds.size > 0;
   listeners.forEach((l) => l(visible));
 }
 
-export function warmingStart() {
-  slowRequestCount++;
+export function warmingStart(id: number) {
+  activeIds.add(id);
   emit();
 }
 
-export function warmingEnd() {
-  slowRequestCount = Math.max(0, slowRequestCount - 1);
-  emit();
+export function warmingEnd(id: number) {
+  if (activeIds.delete(id)) emit();
 }
 
 // --- Overlay component ----------------------------------------------------
