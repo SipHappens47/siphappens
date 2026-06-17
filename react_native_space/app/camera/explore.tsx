@@ -5,7 +5,10 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiService } from '../../src/services/api';
+import { playIceSound } from '../../src/utils/sound';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
@@ -46,25 +49,14 @@ export default function ExploreCameraScreen() {
     );
   }
 
-  const takePicture = async () => {
-    if (!cameraRef?.current || capturing || analyzing) return;
-
+  // Resize, recognize and route to the explore result — shared by camera
+  // capture and gallery selection.
+  const processImage = async (uri: string) => {
     try {
-      setCapturing(true);
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
-        base64: false,
-      });
-
-      if (!photo?.uri) {
-        Alert.alert('Error', 'Failed to capture image');
-        return;
-      }
-
       setAnalyzing(true);
 
       const resizedImage = await ImageManipulator.manipulateAsync(
-        photo.uri,
+        uri,
         [{ resize: { width: 1024 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
@@ -92,11 +84,49 @@ export default function ExploreCameraScreen() {
         );
       }
     } catch (error) {
-      console.error('Explore camera error:', error);
+      console.error('Explore image processing error:', error);
       Alert.alert('Error', 'Failed to analyze bottle. Please try again.');
     } finally {
       setCapturing(false);
       setAnalyzing(false);
+    }
+  };
+
+  const takePicture = async () => {
+    if (!cameraRef?.current || capturing || analyzing) return;
+    try {
+      setCapturing(true);
+      playIceSound();
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false });
+      if (!photo?.uri) {
+        Alert.alert('Error', 'Failed to capture image');
+        setCapturing(false);
+        return;
+      }
+      await processImage(photo.uri);
+    } catch (error) {
+      console.error('Explore camera error:', error);
+      Alert.alert('Error', 'Failed to analyze bottle. Please try again.');
+      setCapturing(false);
+      setAnalyzing(false);
+    }
+  };
+
+  const pickFromGallery = async () => {
+    if (capturing || analyzing) return;
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant photo library access to choose a photo.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (!result?.canceled && result?.assets?.[0]?.uri) {
+        await processImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Explore gallery pick error:', error);
+      Alert.alert('Error', 'Failed to load photo. Please try again.');
     }
   };
 
@@ -123,13 +153,22 @@ export default function ExploreCameraScreen() {
                 <Text style={styles.analyzingText}>Identifying bottle...</Text>
               </View>
             ) : (
-              <Pressable
-                style={styles.captureButton}
-                onPress={takePicture}
-                disabled={capturing}
-              >
-                <View style={styles.captureButtonInner} />
-              </Pressable>
+              <View style={styles.captureRow}>
+                <Pressable style={styles.galleryButton} onPress={pickFromGallery}>
+                  <MaterialCommunityIcons name="image-multiple" size={26} color={Colors.white} />
+                  <Text style={styles.galleryLabel}>Gallery</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.captureButton}
+                  onPress={takePicture}
+                  disabled={capturing}
+                >
+                  <View style={styles.captureButtonInner} />
+                </Pressable>
+
+                <View style={styles.galleryButton} />
+              </View>
             )}
           </View>
         </SafeAreaView>
@@ -172,6 +211,23 @@ const styles = StyleSheet.create({
   bottomBar: {
     alignItems: 'center',
     paddingBottom: spacing.xl,
+  },
+  captureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: spacing.xl,
+  },
+  galleryButton: {
+    width: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryLabel: {
+    color: Colors.white,
+    fontSize: 12,
+    marginTop: 2,
   },
   captureButton: {
     width: 70,

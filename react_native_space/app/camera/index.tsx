@@ -5,7 +5,10 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiService } from '../../src/services/api';
+import { playIceSound } from '../../src/utils/sound';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
@@ -44,27 +47,16 @@ export default function CameraScreen() {
     );
   }
 
-  const takePicture = async () => {
-    if (!cameraRef?.current || capturing || analyzing) return;
-
+  // Resize, recognize and route to spirit-details — shared by camera capture
+  // and gallery selection.
+  const processImage = async (uri: string) => {
     try {
-      setCapturing(true);
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
-        base64: false, // We'll get base64 after resizing
-      });
-
-      if (!photo?.uri) {
-        Alert.alert('Error', 'Failed to capture image');
-        return;
-      }
-
       setAnalyzing(true);
 
       // Resize image to reduce payload size (AI doesn't need full resolution)
       const resizedImage = await ImageManipulator.manipulateAsync(
-        photo.uri,
-        [{ resize: { width: 1024 } }], // Resize to max 1024px width, maintaining aspect ratio
+        uri,
+        [{ resize: { width: 1024 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
 
@@ -80,28 +72,70 @@ export default function CameraScreen() {
           pathname: '/camera/spirit-details',
           params: {
             matches: JSON.stringify(result.matches),
-            imageUri: resizedImage.uri, // Use resized image URI for upload
+            imageUri: resizedImage.uri,
           },
         });
       } else {
         Alert.alert(
           'No Matches Found',
-          'We couldn\'t identify this bottle. Would you like to enter details manually?',
+          "We couldn't identify this bottle. Would you like to enter details manually?",
           [
             { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Enter Manually',
-              onPress: () => router.push('/camera/manual-search'),
-            },
+            { text: 'Enter Manually', onPress: () => router.push('/camera/manual-search') },
           ]
         );
       }
     } catch (error) {
-      console.error('Camera error:', error);
+      console.error('Image processing error:', error);
       Alert.alert('Error', 'Failed to analyze bottle. Please try again.');
     } finally {
       setCapturing(false);
       setAnalyzing(false);
+    }
+  };
+
+  const takePicture = async () => {
+    if (!cameraRef?.current || capturing || analyzing) return;
+    try {
+      setCapturing(true);
+      playIceSound(); // ice clink instead of relying on the camera shutter
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+      });
+      if (!photo?.uri) {
+        Alert.alert('Error', 'Failed to capture image');
+        setCapturing(false);
+        return;
+      }
+      await processImage(photo.uri);
+    } catch (error) {
+      console.error('Camera error:', error);
+      Alert.alert('Error', 'Failed to analyze bottle. Please try again.');
+      setCapturing(false);
+      setAnalyzing(false);
+    }
+  };
+
+  // Pick an existing photo from the gallery and run it through recognition.
+  const pickFromGallery = async () => {
+    if (capturing || analyzing) return;
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant photo library access to choose a photo.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (!result?.canceled && result?.assets?.[0]?.uri) {
+        await processImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Gallery pick error:', error);
+      Alert.alert('Error', 'Failed to load photo. Please try again.');
     }
   };
 
@@ -127,13 +161,24 @@ export default function CameraScreen() {
               </View>
             ) : (
               <>
-                <Pressable
-                  style={styles.captureButton}
-                  onPress={takePicture}
-                  disabled={capturing}
-                >
-                  <View style={styles.captureButtonInner} />
-                </Pressable>
+                <View style={styles.captureRow}>
+                  {/* Gallery button — pick an existing photo to identify */}
+                  <Pressable style={styles.galleryButton} onPress={pickFromGallery}>
+                    <MaterialCommunityIcons name="image-multiple" size={26} color={Colors.white} />
+                    <Text style={styles.galleryLabel}>Gallery</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.captureButton}
+                    onPress={takePicture}
+                    disabled={capturing}
+                  >
+                    <View style={styles.captureButtonInner} />
+                  </Pressable>
+
+                  {/* Spacer to keep the capture button centered */}
+                  <View style={styles.galleryButton} />
+                </View>
                 <Button
                   mode="text"
                   onPress={() => router.push('/camera/manual-search')}
@@ -174,6 +219,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: spacing.xl,
   },
+  captureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  galleryButton: {
+    width: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryLabel: {
+    color: Colors.white,
+    fontSize: 12,
+    marginTop: 2,
+  },
   captureButton: {
     width: 70,
     height: 70,
@@ -181,7 +244,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.text,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.md,
   },
   captureButtonInner: {
     width: 60,
