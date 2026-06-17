@@ -43,15 +43,20 @@ class ApiService {
         // that force-ends it after 75s in case the response is never seen
         // (e.g. a network error with no config to clear) — so the overlay can
         // never outlive the request that triggered it.
-        const warmingId = ++ApiService.warmingSeq;
-        (config as any).__warmingId = warmingId;
-        (config as any).__warmingTimer = setTimeout(() => {
-          (config as any).__warmingShown = true;
-          warmingStart(warmingId);
-        }, 3000);
-        (config as any).__warmingSafety = setTimeout(() => {
-          warmingEnd(warmingId);
-        }, 75000);
+        // Requests flagged __skipWarming (e.g. the silent boot auth check) never
+        // trigger the overlay, so it can't appear over the login screen while
+        // the app is just checking the saved session in the background.
+        if (!(config as any).__skipWarming) {
+          const warmingId = ++ApiService.warmingSeq;
+          (config as any).__warmingId = warmingId;
+          (config as any).__warmingTimer = setTimeout(() => {
+            (config as any).__warmingShown = true;
+            warmingStart(warmingId);
+          }, 3000);
+          (config as any).__warmingSafety = setTimeout(() => {
+            warmingEnd(warmingId);
+          }, 75000);
+        }
         try {
           const token = Platform.OS === 'web'
             ? await AsyncStorage.getItem('authToken')
@@ -145,7 +150,9 @@ class ApiService {
   async getMe(): Promise<User> {
     const url = new URL('/api/auth/me', API_URL).toString();
     console.log('[ApiService] getMe - calling:', url);
-    const response = await this.client.get<User>(url);
+    // Silent background session check — must not flash the warming overlay
+    // over the login screen.
+    const response = await this.client.get<User>(url, { __skipWarming: true } as any);
     console.log('[ApiService] getMe - response status:', response?.status);
     return response?.data ?? {} as User;
   }

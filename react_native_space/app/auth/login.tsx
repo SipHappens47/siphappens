@@ -4,6 +4,7 @@ import { Text, TextInput, Button } from 'react-native-paper';
 import { useRouter, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
+import { playIceSound } from '../../src/utils/sound';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
@@ -57,7 +58,10 @@ export default function LoginScreen() {
       console.log('[Login] Attempting login with email:', email.trim());
       const response = await login(email.trim(), password);
       console.log('[Login] Login successful, response:', response);
-      
+
+      // Celebratory ice-in-glass chime as we head into the app
+      playIceSound();
+
       // Always redirect to tabs for both user and distillery accounts
       console.log('[Login] Redirecting to tabs');
       router.replace('/tabs');

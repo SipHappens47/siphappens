@@ -93,11 +93,11 @@
     },
     "extra": {
       "router": {},
+      "apiUrl": "https://siphappens.onrender.com/",
       "eas": {
-        "projectId": "00068069-769a-47ca-81af-a9c4cafa696f"
-      },
-      "apiUrl": "https://siphappens.onrender.com/"
+        "projectId": "e3202ed7-60b9-42e9-9edc-f79fcd01dbca"
+      }
     },
-    "owner": "siphappens"
+    "owner": "ajhartman47"
   }
 }
