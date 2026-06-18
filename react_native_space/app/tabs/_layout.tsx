@@ -44,9 +44,10 @@ export default function TabsLayout() {
 
     const check = async () => {
       try {
+        // silent=true so this background poll never triggers the warming overlay
         const [pending, cheers, lastSeen] = await Promise.all([
-          apiService.getPendingRequests(),
-          apiService.getReceivedCheers(),
+          apiService.getPendingRequests(true),
+          apiService.getReceivedCheers(true),
           AsyncStorage.getItem('notificationsLastSeen'),
         ]);
         const incoming = (pending ?? []).filter(

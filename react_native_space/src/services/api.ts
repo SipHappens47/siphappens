@@ -380,9 +380,10 @@ class ApiService {
     return response?.data ?? { message: '' };
   }
 
-  async getPendingRequests(): Promise<Connection[]> {
+  async getPendingRequests(silent = false): Promise<Connection[]> {
     const response = await this.client.get<Connection[]>(
-      new URL('/api/connections/pending', API_URL).toString()
+      new URL('/api/connections/pending', API_URL).toString(),
+      silent ? ({ __skipWarming: true } as any) : undefined,
     );
     return response?.data ?? [];
   }
@@ -660,8 +661,11 @@ class ApiService {
     return (response?.data as any) ?? { spiritId, pourCount: 0 };
   }
 
-  async getReceivedCheers(): Promise<{ id: string; createdAt: string; user: { id: string; name: string; profilePhoto?: string }; pourId: string; spiritName: string }[]> {
-    const response = await this.client.get(new URL('/api/cheers/received', API_URL).toString());
+  async getReceivedCheers(silent = false): Promise<{ id: string; createdAt: string; user: { id: string; name: string; profilePhoto?: string }; pourId: string; spiritName: string }[]> {
+    const response = await this.client.get(
+      new URL('/api/cheers/received', API_URL).toString(),
+      silent ? ({ __skipWarming: true } as any) : undefined,
+    );
     return (response?.data as any) ?? [];
   }
 

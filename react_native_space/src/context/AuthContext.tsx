@@ -85,27 +85,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const checkAuth = async () => {
     try {
       console.log('[AuthContext] checkAuth started');
-      
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Auth check timeout')), 5000)
-      );
-      
-      const authPromise = authService.getCurrentUser();
-      
-      const currentUser = await Promise.race([authPromise, timeoutPromise]) as User | null;
-      
-      console.log('[AuthContext] checkAuth result:', currentUser?.id ?? 'no user');
-      setUser(currentUser ?? null);
+
+      const token = await authService.getToken();
+      if (!token) {
+        setUser(null);
+        return;
+      }
+
+      // We have a token → consider the user logged in. Show the cached user
+      // immediately so the app never bounces to login on a slow/cold server.
+      const cached = await authService.getCachedUser();
+      if (cached?.id) setUser(cached);
+
+      // Validate/refresh in the background. ONLY a 401 (genuinely invalid
+      // token) logs the user out — a timeout or network error keeps them
+      // signed in with the cached profile.
+      try {
+        const fresh = await apiService.getMe();
+        if (fresh?.id) {
+          setUser(fresh);
+          await authService.cacheUser(fresh);
+        }
+      } catch (error: any) {
+        if (error?.response?.status === 401) {
+          console.log('[AuthContext] Token rejected (401) - logging out');
+          await authService.logout();
+          setUser(null);
+        } else {
+          console.log('[AuthContext] Session validation deferred (server slow/offline) - staying logged in');
+        }
+      }
     } catch (error: any) {
       console.error('[AuthContext] Auth check error:', error?.message ?? error);
-      // Clear invalid token
-      try {
-        await authService.logout();
-      } catch (e) {
-        console.error('[AuthContext] Logout failed:', e);
-      }
-      setUser(null);
     } finally {
       console.log('[AuthContext] checkAuth complete, setting loading=false');
       setLoading(false);

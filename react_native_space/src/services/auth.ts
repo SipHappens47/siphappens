@@ -5,6 +5,7 @@ import { apiService } from './api';
 import { AuthResponse, User } from '../types';
 
 const TOKEN_KEY = 'authToken';
+const CACHED_USER_KEY = 'cachedUser';
 
 // Platform-specific secure storage
 const secureStorage = {
@@ -53,10 +54,11 @@ export const authService = {
       if (response?.token) {
         console.log('[AuthService] Storing token securely');
         await secureStorage.setItem(TOKEN_KEY, response.token);
+        if (response.user) await this.cacheUser(response.user);
       } else {
         console.warn('[AuthService] No token in signup response');
       }
-      
+
       return response ?? { token: '', user: {} as User };
     } catch (error: any) {
       console.error('[AuthService] Signup error:', error?.response?.status, error?.response?.data, error?.message);
@@ -73,10 +75,11 @@ export const authService = {
       if (response?.token) {
         console.log('[AuthService] Storing token securely');
         await secureStorage.setItem(TOKEN_KEY, response.token);
+        if (response.user) await this.cacheUser(response.user);
       } else {
         console.warn('[AuthService] No token in login response');
       }
-      
+
       return response ?? { token: '', user: {} as User };
     } catch (error: any) {
       console.error('[AuthService] Login error:', error?.response?.status, error?.response?.data, error?.message);
@@ -87,8 +90,28 @@ export const authService = {
   async logout(): Promise<void> {
     try {
       await secureStorage.removeItem(TOKEN_KEY);
+      await AsyncStorage.removeItem(CACHED_USER_KEY);
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  },
+
+  // Cache the user locally so the app can show a logged-in state instantly on
+  // launch (and stay logged in even if the server is briefly unreachable).
+  async cacheUser(user: User): Promise<void> {
+    try {
+      await AsyncStorage.setItem(CACHED_USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.error('Cache user error:', error);
+    }
+  },
+
+  async getCachedUser(): Promise<User | null> {
+    try {
+      const raw = await AsyncStorage.getItem(CACHED_USER_KEY);
+      return raw ? (JSON.parse(raw) as User) : null;
+    } catch {
+      return null;
     }
   },
 
