@@ -13,7 +13,8 @@ import { JwtStrategy } from './jwt.strategy';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '7d' },
+        // Effectively permanent — users stay logged in until they tap Log Out
+        signOptions: { expiresIn: '3650d' },
       }),
       inject: [ConfigService],
     }),

@@ -243,6 +243,6 @@ export class AuthService {
     if (distilleryId) {
       payload.distilleryId = distilleryId;
     }
-    return this.jwtService.sign(payload, { expiresIn: '7d' });
+    return this.jwtService.sign(payload, { expiresIn: '3650d' });
   }
 }

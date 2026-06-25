@@ -5,7 +5,6 @@ import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../src/context/AuthContext';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
-import { WarmingOverlay } from '../src/components/WarmingOverlay';
 import { BadgeToast } from '../src/components/BadgeToast';
 import { theme } from '../src/constants/theme';
 import { StatusBar } from 'expo-status-bar';
@@ -80,7 +79,6 @@ export default function RootLayout() {
               <Stack.Screen name="connections" />
               <Stack.Screen name="admin" />
             </Stack>
-            <WarmingOverlay />
             <BadgeToast />
           </AuthProvider>
         </PaperProvider>
