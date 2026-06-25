@@ -8,6 +8,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiService } from '../../src/services/api';
+import { playPourSound } from '../../src/utils/sound';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
@@ -97,6 +98,7 @@ export default function CameraScreen() {
     if (!cameraRef?.current || capturing || analyzing) return;
     try {
       setCapturing(true);
+      playPourSound(); // pouring sound on scan
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
