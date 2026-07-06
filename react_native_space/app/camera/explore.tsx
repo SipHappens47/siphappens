@@ -97,7 +97,7 @@ export default function ExploreCameraScreen() {
     try {
       setCapturing(true);
       playPourSound(); // pouring sound on scan
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false, shutterSound: false });
       if (!photo?.uri) {
         Alert.alert('Error', 'Failed to capture image');
         setCapturing(false);

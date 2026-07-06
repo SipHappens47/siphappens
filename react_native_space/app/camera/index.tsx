@@ -102,6 +102,7 @@ export default function CameraScreen() {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
+        shutterSound: false, // silence the OS shutter; we play our pour sound
       });
       if (!photo?.uri) {
         Alert.alert('Error', 'Failed to capture image');
