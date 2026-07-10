@@ -78,6 +78,7 @@ export default function RootLayout() {
               <Stack.Screen name="profile" />
               <Stack.Screen name="connections" />
               <Stack.Screen name="admin" />
+              <Stack.Screen name="legal" />
             </Stack>
             <BadgeToast />
           </AuthProvider>

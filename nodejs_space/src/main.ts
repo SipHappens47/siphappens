@@ -1,20 +1,33 @@
-import { NestFactory } from '@nestjs/core';
+// Must be imported before anything else so Sentry can instrument the app.
+import './instrument';
+import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { Request, Response, NextFunction } from 'express';
 import * as express from 'express';
+import { SentryFilter } from './sentry.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Report unhandled 5xx errors to Sentry (no-op until SENTRY_DSN is set).
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new SentryFilter(httpAdapter));
 
   // Increase body size limit for image uploads (10MB for JSON payloads with base64 images)
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-  // Enable CORS with proper configuration
+  // Enable CORS. Native mobile apps send no Origin header so they are unaffected;
+  // this only gates browser (web build) callers. Set CORS_ORIGINS to a
+  // comma-separated allowlist (e.g. your Render static site URL) in production.
+  const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()).filter(Boolean);
+  if (!corsOrigins?.length) {
+    console.warn('[CORS] CORS_ORIGINS not set — reflecting all origins. Set it before launch.');
+  }
   app.enableCors({
-    origin: true, // Accept all origins (use true instead of '*' when credentials are enabled)
+    origin: corsOrigins?.length ? corsOrigins : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -86,14 +99,22 @@ async function bootstrap() {
     }
   `;
 
-  SwaggerModule.setup(swaggerPath, app, document, {
-    customCss,
-    customSiteTitle: 'SipHappens API',
-    customfavIcon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">🥃</text></svg>',
-  });
+  // Swagger exposes the full API surface — only mount it outside production,
+  // unless explicitly enabled via ENABLE_SWAGGER.
+  const enableSwagger =
+    process.env.NODE_ENV !== 'production' || process.env.ENABLE_SWAGGER === 'true';
+  if (enableSwagger) {
+    SwaggerModule.setup(swaggerPath, app, document, {
+      customCss,
+      customSiteTitle: 'SipHappens API',
+      customfavIcon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">🥃</text></svg>',
+    });
+  }
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`Application is running on: ${await app.getUrl()}`);
-  console.log(`Swagger documentation: ${await app.getUrl()}/${swaggerPath}`);
+  if (enableSwagger) {
+    console.log(`Swagger documentation: ${await app.getUrl()}/${swaggerPath}`);
+  }
 }
 bootstrap();

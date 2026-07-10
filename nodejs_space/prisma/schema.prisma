@@ -27,6 +27,11 @@ model user {
   isofficial                Boolean         @default(false)  // true = SipHappens official system account
   pushtoken                 String?         // Expo push notification token
   allowinstantfollow        Boolean         @default(false)  // Skip approval: others follow instantly
+  tokenversion              Int             @default(0)      // Bumped to revoke all existing tokens (logout-everywhere)
+  dailyscancount            Int             @default(0)      // Bottle-scan calls used on dailyscandate
+  dailyscandate             String?                          // YYYY-MM-DD (UTC) the scan count applies to
+  resetcodehash             String?                          // bcrypt hash of the current password-reset code
+  resetcodeexpiry           DateTime?                        // when the reset code expires
   createdat                 DateTime        @default(now())
   
   pours                     pour[]
@@ -38,7 +43,10 @@ model user {
   userbadges                userbadge[]
   distilleryfollows         distilleryfollower[]
   owneddistillery           distillery[]
-  
+  blocksMade                block[]  @relation("BlockInitiator")
+  blocksAgainst             block[]  @relation("BlockTarget")
+  reportsMade               report[] @relation("ReportsMade")
+
   @@index([name])
   @@index([email])
 }
@@ -296,4 +304,42 @@ model userbadge {
   @@unique([userid, badgeid, tier])
   @@index([userid])
   @@index([badgeid])
+}
+// A user blocking another user. Blocked users' content is hidden from the
+// blocker (and vice versa) across the feed, search, and profiles.
+model block {
+  id        String   @id @default(uuid())
+  blockerid String
+  blockedid String
+  createdat DateTime @default(now())
+
+  blocker user @relation("BlockInitiator", fields: [blockerid], references: [id], onDelete: Cascade)
+  blocked user @relation("BlockTarget", fields: [blockedid], references: [id], onDelete: Cascade)
+
+  @@unique([blockerid, blockedid])
+  @@index([blockerid])
+  @@index([blockedid])
+}
+
+enum ReportStatus {
+  Open
+  Resolved
+  Dismissed
+}
+
+// A user report of objectionable content or another user. Reviewed by an admin.
+// target is polymorphic (targettype = "pour" | "user"), so no FK relation.
+model report {
+  id         String       @id @default(uuid())
+  reporterid String
+  targettype String
+  targetid   String
+  reason     String
+  status     ReportStatus @default(Open)
+  createdat  DateTime     @default(now())
+
+  reporter user @relation("ReportsMade", fields: [reporterid], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([targettype, targetid])
 }

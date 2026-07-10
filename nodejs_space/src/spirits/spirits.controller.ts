@@ -17,8 +17,8 @@ export class SpiritsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Recognize spirit from bottle image using AI' })
   @ApiResponse({ status: 200, description: 'Bottle analyzed successfully' })
-  async recognizeBottle(@Body() dto: RecognizeBottleDto) {
-    return this.spiritsService.recognizeBottle(dto);
+  async recognizeBottle(@Request() req: any, @Body() dto: RecognizeBottleDto) {
+    return this.spiritsService.recognizeBottle(req.user.userId, dto);
   }
 
   @Get('search-images')

@@ -110,6 +110,28 @@ export default function EditProfileScreen() {
     router.replace('/auth/welcome');
   };
 
+  const handleDeleteAccount = async () => {
+    const message =
+      'Permanently delete your account? This erases your pours, photos, and connections. This cannot be undone.';
+    const confirmed =
+      Platform.OS === 'web'
+        ? window.confirm(message)
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert('Delete Account', message, [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+          });
+    if (!confirmed) return;
+    try {
+      await apiService.deleteAccount();
+      await logout();
+      router.replace('/auth/welcome');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to delete account. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -236,6 +258,16 @@ export default function EditProfileScreen() {
             </Button>
           </View>
 
+          {/* Legal links */}
+          <View style={styles.legalLinks}>
+            <Button mode="text" compact onPress={() => router.push('/legal/privacy' as any)} textColor={Colors.textMuted}>
+              Privacy Policy
+            </Button>
+            <Button mode="text" compact onPress={() => router.push('/legal/terms' as any)} textColor={Colors.textMuted}>
+              Terms of Service
+            </Button>
+          </View>
+
           {/* Logout Section */}
           <View style={styles.logoutSection}>
             <Button
@@ -245,6 +277,14 @@ export default function EditProfileScreen() {
               textColor={Colors.error}
             >
               Logout
+            </Button>
+            <Button
+              mode="text"
+              onPress={handleDeleteAccount}
+              style={styles.deleteAccountButton}
+              textColor={Colors.error}
+            >
+              Delete Account
             </Button>
           </View>
         </ScrollView>
@@ -351,11 +391,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text, // Primary text
   },
-  logoutSection: {
+  legalLinks: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginTop: spacing.xl,
+  },
+  logoutSection: {
+    marginTop: spacing.md,
     marginBottom: spacing.xl,
   },
   logoutButton: {
     borderColor: Colors.error,
+  },
+  deleteAccountButton: {
+    marginTop: spacing.sm,
   },
 });

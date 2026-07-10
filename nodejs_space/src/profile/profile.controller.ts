@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Get, Put, Post, Delete, Body, UseGuards, Request, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProfileService } from './profile.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -53,5 +53,13 @@ export class ProfileController {
   @ApiResponse({ status: 201, description: 'Push token saved' })
   async savePushToken(@Request() req: any, @Body() dto: PushTokenDto) {
     return this.profileService.savePushToken(req.user.userId, dto.token);
+  }
+
+  @Delete('account')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Permanently delete the current user account and all their data' })
+  @ApiResponse({ status: 200, description: 'Account deleted' })
+  async deleteAccount(@Request() req: any) {
+    return this.profileService.deleteAccount(req.user.userId);
   }
 }

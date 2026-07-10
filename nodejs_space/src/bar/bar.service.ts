@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionsService } from '../connections/connections.service';
 import { CheersService } from '../cheers/cheers.service';
+import { ModerationService } from '../moderation/moderation.service';
 
 @Injectable()
 export class BarService {
@@ -9,6 +10,7 @@ export class BarService {
     private prisma: PrismaService,
     private connectionsService: ConnectionsService,
     private cheersService: CheersService,
+    private moderationService: ModerationService,
   ) {}
 
   async getBarFeed(
@@ -40,6 +42,9 @@ export class BarService {
         conn.initiatorid === userId ? conn.receiverid : conn.initiatorid,
       );
 
+    // Hide content from users this user has blocked (or who blocked them).
+    const hiddenUserIds = await this.moderationService.getHiddenUserIds(userId);
+
     // Build filter conditions
     const where: any = {
       isshared: true,
@@ -48,7 +53,12 @@ export class BarService {
     // Show the user's own shared pours alongside their Fellow Sippers'.
     // With no connections yet, show all shared pours (including their own).
     if (fellowSipperIds.length > 0) {
-      where.userid = { in: [...fellowSipperIds, userId] };
+      const visibleIds = [...fellowSipperIds, userId].filter(
+        (id) => !hiddenUserIds.includes(id),
+      );
+      where.userid = { in: visibleIds };
+    } else if (hiddenUserIds.length > 0) {
+      where.userid = { notIn: hiddenUserIds };
     }
 
     if (filters.category) {

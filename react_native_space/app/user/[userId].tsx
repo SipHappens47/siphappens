@@ -34,6 +34,8 @@ export default function PublicUserProfileScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [muteLoading, setMuteLoading] = useState(false);
   const [isOfficial, setIsOfficial] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -72,6 +74,12 @@ export default function PublicUserProfileScreen() {
         const muteData = await apiService.getMuteStatus(userIdString);
         setIsMuted(muteData?.isMuted ?? false);
       } catch { /* ignore if not connected */ }
+
+      // Fetch block status
+      try {
+        const blockedIds = await apiService.getBlockedUserIds();
+        setIsBlocked(blockedIds.includes(userIdString));
+      } catch { /* non-fatal */ }
       
       // Check connection status
       // connections is FellowSipper[], check if the userId is in the list
@@ -207,6 +215,44 @@ export default function PublicUserProfileScreen() {
     } finally {
       setMuteLoading(false);
     }
+  };
+
+  const handleBlockToggle = async () => {
+    const userIdString = Array.isArray(userId) ? userId[0] : String(userId);
+    try {
+      setBlockLoading(true);
+      if (isBlocked) {
+        await apiService.unblockUser(userIdString);
+        setIsBlocked(false);
+      } else {
+        await apiService.blockUser(userIdString);
+        setIsBlocked(true);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message ?? 'Failed to update block status');
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const submitReport = async (reason: string) => {
+    const userIdString = Array.isArray(userId) ? userId[0] : String(userId);
+    try {
+      await apiService.reportContent('user', userIdString, reason);
+      Alert.alert('Reported', 'Thanks — our team will review this account.');
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message ?? 'Failed to submit report');
+    }
+  };
+
+  const handleReport = () => {
+    // Preset reasons keep this cross-platform (Alert.prompt is iOS-only).
+    Alert.alert('Report this account', 'Why are you reporting it?', [
+      { text: 'Spam', onPress: () => submitReport('Spam') },
+      { text: 'Offensive or abusive', onPress: () => submitReport('Offensive or abusive') },
+      { text: 'Inappropriate content', onPress: () => submitReport('Inappropriate content') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const renderConnectionButton = () => {
@@ -366,6 +412,30 @@ export default function PublicUserProfileScreen() {
           ) : (
             renderConnectionButton()
           )}
+        </View>
+
+        {/* Safety actions: report + block */}
+        <View style={styles.safetyActions}>
+          <Button
+            mode="text"
+            compact
+            onPress={handleReport}
+            textColor={Colors.textMuted}
+            icon="flag-outline"
+          >
+            Report
+          </Button>
+          <Button
+            mode="text"
+            compact
+            onPress={handleBlockToggle}
+            loading={blockLoading}
+            disabled={blockLoading}
+            textColor={Colors.error}
+            icon="block-helper"
+          >
+            {isBlocked ? 'Unblock' : 'Block'}
+          </Button>
         </View>
 
         {/* Profile Info Section */}
@@ -562,6 +632,12 @@ const styles = StyleSheet.create({
   connectionButtonContainer: {
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
+  },
+  safetyActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   connectionButton: {
     borderRadius: 12,

@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { sendEmail } from '../lib/email';
 
 @Injectable()
 export class AuthService {
@@ -108,7 +109,7 @@ export class AuthService {
     distillery = distillery && distillery.verified ? distillery : null;
 
     // Generate token with distillery information if applicable
-    const token = this.generateToken(user.id, user.email, distillery?.id);
+    const token = this.generateToken(user.id, user.email, user.tokenversion, distillery?.id);
 
     return {
       user: {
@@ -155,7 +156,7 @@ export class AuthService {
     const distillery = owned && owned.verified ? owned : null;
 
     // Generate token with distillery information if applicable
-    const token = this.generateToken(user.id, user.email, distillery?.id);
+    const token = this.generateToken(user.id, user.email, user.tokenversion, distillery?.id);
 
     return {
       user: {
@@ -238,11 +239,80 @@ export class AuthService {
     };
   }
 
-  private generateToken(userId: string, email: string, distilleryId?: string): string {
-    const payload: any = { sub: userId, email };
+  private generateToken(userId: string, email: string, tokenVersion: number, distilleryId?: string): string {
+    const payload: any = { sub: userId, email, tokenVersion };
     if (distilleryId) {
       payload.distilleryId = distilleryId;
     }
     return this.jwtService.sign(payload, { expiresIn: '3650d' });
+  }
+
+  // Invalidate every existing token for a user (logout-everywhere). Bumping the
+  // stored version makes any previously issued token fail verification, without
+  // rotating JWT_SECRET (which would log out all users at once).
+  async logoutAll(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenversion: { increment: 1 } },
+    });
+    return { success: true };
+  }
+
+  // Emails a 6-digit reset code. Always returns the same generic response so
+  // the endpoint can't be used to probe which emails have accounts.
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (user) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const codeHash = await bcrypt.hash(code, 10);
+      const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { resetcodehash: codeHash, resetcodeexpiry: expiry },
+      });
+
+      try {
+        await sendEmail(
+          email,
+          'Your SipHappens password reset code',
+          `<p>Your password reset code is <strong style="font-size:20px">${code}</strong>.</p>` +
+            `<p>It expires in 15 minutes. If you didn't request this, you can ignore this email.</p>`,
+        );
+      } catch {
+        // Don't leak send failures to the caller; it's logged in the helper.
+      }
+    }
+
+    return { message: 'If that email has an account, a reset code has been sent.' };
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || !user.resetcodehash || !user.resetcodeexpiry) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+    if (user.resetcodeexpiry < new Date()) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    const codeValid = await bcrypt.compare(code, user.resetcodehash);
+    if (!codeValid) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetcodehash: null,
+        resetcodeexpiry: null,
+        // Revoke any existing sessions after a password reset.
+        tokenversion: { increment: 1 },
+      },
+    });
+
+    return { success: true };
   }
 }

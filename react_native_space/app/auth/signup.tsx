@@ -431,6 +431,18 @@ export default function SignupScreen() {
                 {accountType === 'distillery' ? 'Register Distillery' : 'Sign Up'}
               </Button>
 
+              <Text style={styles.agreementText}>
+                By signing up you agree to our{' '}
+                <Text style={styles.agreementLink} onPress={() => router.push('/legal/terms' as Href)}>
+                  Terms
+                </Text>{' '}
+                and{' '}
+                <Text style={styles.agreementLink} onPress={() => router.push('/legal/privacy' as Href)}>
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
+
               <Button
                 mode="text"
                 onPress={() => router.push('/auth/login')}
@@ -603,6 +615,16 @@ const styles = StyleSheet.create({
   linkButtonLabel: {
     color: Colors.textSecondary,
     fontWeight: '500',
+  },
+  agreementText: {
+    marginTop: spacing.sm,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  agreementLink: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });
 // AUTH_SCREEN_VERSION_1772793707

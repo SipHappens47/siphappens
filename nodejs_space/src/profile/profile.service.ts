@@ -1,11 +1,38 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePhotoDto } from './dto/update-photo.dto';
+import * as s3 from '../lib/s3';
 
 @Injectable()
 export class ProfileService {
+  private readonly logger = new Logger(ProfileService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  // Permanently delete the account and everything tied to it. DB rows cascade
+  // via the schema's onDelete: Cascade (pours, cheers, radar, connections,
+  // badges, files); an owned distillery is kept but un-owned (SetNull). We also
+  // best-effort delete the user's uploaded images from storage so nothing is
+  // orphaned. Required by App Store 5.1.1(v) and Google Play.
+  async deleteAccount(userId: string) {
+    const files = await this.prisma.file.findMany({
+      where: { userid: userId },
+      select: { cloudstoragepath: true },
+    });
+
+    for (const file of files) {
+      try {
+        await s3.deleteFile(file.cloudstoragepath);
+      } catch (err: any) {
+        // Non-fatal: a missing storage object shouldn't block account deletion.
+        this.logger.warn(`Failed to delete storage object ${file.cloudstoragepath}: ${err?.message}`);
+      }
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { success: true };
+  }
 
   async savePushToken(userId: string, token: string) {
     await this.prisma.user.update({

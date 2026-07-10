@@ -104,6 +104,20 @@ class ApiService {
     }
   }
 
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const response = await this.client.post(new URL('/api/auth/forgot-password', API_URL).toString(), { email });
+    return (response?.data as any) ?? { message: '' };
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string): Promise<{ success: boolean }> {
+    const response = await this.client.post(new URL('/api/auth/reset-password', API_URL).toString(), {
+      email,
+      code,
+      newPassword,
+    });
+    return (response?.data as any) ?? { success: true };
+  }
+
   async getMe(): Promise<User> {
     const url = new URL('/api/auth/me', API_URL).toString();
     console.log('[ApiService] getMe - calling:', url);
@@ -593,6 +607,35 @@ class ApiService {
   async savePushToken(token: string): Promise<{ message: string }> {
     const response = await this.client.post(new URL('/api/profile/push-token', API_URL).toString(), { token });
     return (response?.data as any) ?? { message: '' };
+  }
+
+  async deleteAccount(): Promise<{ success: boolean }> {
+    const response = await this.client.delete(new URL('/api/profile/account', API_URL).toString());
+    return (response?.data as any) ?? { success: true };
+  }
+
+  async reportContent(targetType: 'pour' | 'user', targetId: string, reason: string): Promise<{ success: boolean }> {
+    const response = await this.client.post(new URL('/api/moderation/report', API_URL).toString(), {
+      targetType,
+      targetId,
+      reason,
+    });
+    return (response?.data as any) ?? { success: true };
+  }
+
+  async blockUser(userId: string): Promise<{ success: boolean }> {
+    const response = await this.client.post(new URL(`/api/moderation/block/${userId}`, API_URL).toString());
+    return (response?.data as any) ?? { success: true };
+  }
+
+  async unblockUser(userId: string): Promise<{ success: boolean }> {
+    const response = await this.client.delete(new URL(`/api/moderation/block/${userId}`, API_URL).toString());
+    return (response?.data as any) ?? { success: true };
+  }
+
+  async getBlockedUserIds(): Promise<string[]> {
+    const response = await this.client.get(new URL('/api/moderation/blocks', API_URL).toString());
+    return (response?.data as any) ?? [];
   }
 
   async getExperienceBreakdown(): Promise<{

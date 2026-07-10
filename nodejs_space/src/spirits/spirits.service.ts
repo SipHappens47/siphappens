@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecognizeBottleDto } from './dto/recognize-bottle.dto';
 import { CreateSpiritDto } from './dto/create-spirit.dto';
@@ -21,7 +21,37 @@ export class SpiritsService {
     return region;
   }
 
-  async recognizeBottle(dto: RecognizeBottleDto) {
+  // Per-user daily cap on AI scans so a single account can't exhaust the shared
+  // Gemini quota for everyone. Counts attempts (not just successes) to prevent
+  // retry-spam. Configurable via SCAN_DAILY_LIMIT (default 30).
+  private async enforceScanQuota(userId: string) {
+    const limit = parseInt(process.env.SCAN_DAILY_LIMIT || '30', 10);
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { dailyscancount: true, dailyscandate: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const usedToday = user.dailyscandate === today ? user.dailyscancount : 0;
+    if (usedToday >= limit) {
+      throw new HttpException(
+        `Daily scan limit of ${limit} reached. Try again tomorrow.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { dailyscancount: usedToday + 1, dailyscandate: today },
+    });
+  }
+
+  async recognizeBottle(userId: string, dto: RecognizeBottleDto) {
+    await this.enforceScanQuota(userId);
     try {
       const { image } = dto;
 

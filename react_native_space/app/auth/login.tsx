@@ -137,6 +137,15 @@ export default function LoginScreen() {
 
             <Button
               mode="text"
+              onPress={() => router.push('/auth/forgot-password' as Href)}
+              style={styles.linkButton}
+              labelStyle={[styles.linkButtonLabel, { fontSize: isSmallScreen ? 13 : 15 }]}
+            >
+              Forgot password?
+            </Button>
+
+            <Button
+              mode="text"
               onPress={() => router.push('/auth/signup')}
               style={styles.linkButton}
               labelStyle={[styles.linkButtonLabel, { fontSize: isSmallScreen ? 13 : 15 }]}
