@@ -153,6 +153,7 @@ model pour {
   rating           Int?     // Star rating 1-5
   wouldpouragain   String?  // Yes / No / Maybe
   occasions        String?  // Comma-separated, max 3 (e.g. "Casual,With food")
+  flavortagsraw    String?  // Comma-separated flavour tag names (category + custom)
   createdat        DateTime @default(now())
   updatedat        DateTime @updatedAt
   

@@ -45,6 +45,7 @@ export interface Spirit {
   totalPourCount?: number;
   averageRating?: number | null;
   fellowSipperPours?: { userId: string; userName: string; profilePhoto?: string | null }[];
+  communityTags?: { tag: string; count: number }[];
 }
 
 export interface Pour {

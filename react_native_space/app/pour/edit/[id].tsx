@@ -5,8 +5,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiService } from '../../../src/services/api';
 import { uploadService } from '../../../src/services/upload';
-import { Pour, FlavorTag } from '../../../src/types';
-import { FlavorChips } from '../../../src/components/FlavorChips';
+import { Pour } from '../../../src/types';
+import { FlavorTagSelector } from '../../../src/components/FlavorTagSelector';
 import { ImagePickerComponent } from '../../../src/components/ImagePickerComponent';
 import { TastingNotes } from '../../../src/components/TastingNotes';
 import { Colors } from '../../../src/constants/colors';
@@ -24,8 +24,7 @@ export default function EditPourScreen() {
   const [occasions, setOccasions] = useState<string[]>([]);
   const [imageUri, setImageUri] = useState<string | undefined>();
   const [existingImageId, setExistingImageId] = useState<string | undefined>();
-  const [flavorTags, setFlavorTags] = useState<FlavorTag[]>([]);
-  const [selectedFlavorTagIds, setSelectedFlavorTagIds] = useState<string[]>([]);
+  const [selectedFlavorTags, setSelectedFlavorTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -45,10 +44,7 @@ export default function EditPourScreen() {
         return;
       }
 
-      const [pourData, tags] = await Promise.all([
-        apiService.getPour(pourId),
-        apiService.getFlavorTags(),
-      ]);
+      const pourData = await apiService.getPour(pourId);
 
       setPour(pourData);
       setWhyItHit(pourData?.whyItHit ?? '');
@@ -63,24 +59,15 @@ export default function EditPourScreen() {
         setImageUri(url);
       }
 
-      setSelectedFlavorTagIds(
-        (pourData?.flavorTags ?? []).map((tag) => tag?.id ?? '')
+      setSelectedFlavorTags(
+        (pourData?.flavorTags ?? []).map((tag) => tag?.name ?? '').filter(Boolean)
       );
-      setFlavorTags(tags ?? []);
     } catch (error) {
       console.error('Failed to load data:', error);
       Alert.alert('Error', 'Failed to load pour details');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleToggleFlavorTag = (tagId: string) => {
-    setSelectedFlavorTagIds((prev) =>
-      prev?.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...(prev ?? []), tagId]
-    );
   };
 
   const validate = () => {
@@ -117,7 +104,7 @@ export default function EditPourScreen() {
         whyItHit: whyItHit.trim(),
         image: imageFileId,
         isShared,
-        flavorTagIds: selectedFlavorTagIds,
+        flavorTags: selectedFlavorTags.join(','),
         rating,
         wouldPourAgain,
         occasions: occasions.length > 0 ? occasions.join(',') : null,
@@ -185,10 +172,10 @@ export default function EditPourScreen() {
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             <Text style={styles.sectionTitle}>Flavor Tags</Text>
-            <FlavorChips
-              tags={flavorTags}
-              selectedIds={selectedFlavorTagIds}
-              onToggle={handleToggleFlavorTag}
+            <FlavorTagSelector
+              category={pour?.spirit?.category}
+              value={selectedFlavorTags}
+              onChange={setSelectedFlavorTags}
             />
 
             <TastingNotes

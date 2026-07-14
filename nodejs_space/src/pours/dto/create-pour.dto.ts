@@ -27,6 +27,11 @@ export class CreatePourDto {
   @IsUUID('4', { each: true })
   flavorTagIds?: string[];
 
+  @ApiProperty({ example: 'Vanilla,Oak,Smoky finish', required: false, description: 'Comma-separated flavour tag names (category + custom)' })
+  @IsOptional()
+  @IsString()
+  flavorTags?: string;
+
   @ApiProperty({ example: 4, required: false, description: 'Star rating 1-5' })
   @IsOptional()
   @IsInt()

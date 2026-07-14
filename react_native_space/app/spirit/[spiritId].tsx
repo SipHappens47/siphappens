@@ -8,6 +8,7 @@ import { apiService } from '../../src/services/api';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { Spirit, TasteSummary } from '../../src/types';
+import { CommunityFlavorTags } from '../../src/components/CommunityFlavorTags';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SpiritDetailsScreen() {
@@ -249,6 +250,13 @@ export default function SpiritDetailsScreen() {
                 </Chip>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* What Sippers Taste — weighted community flavour tags */}
+        {(spirit?.communityTags?.length ?? 0) > 0 && (
+          <View style={styles.card}>
+            <CommunityFlavorTags tags={spirit?.communityTags} />
           </View>
         )}
 

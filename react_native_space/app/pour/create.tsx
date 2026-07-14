@@ -7,8 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../../src/services/api';
 import { uploadService } from '../../src/services/upload';
 import { useAuth } from '../../src/context/AuthContext';
-import { Spirit, FlavorTag, Badge } from '../../src/types';
-import { FlavorChips } from '../../src/components/FlavorChips';
+import { Spirit, Badge } from '../../src/types';
+import { FlavorTagSelector } from '../../src/components/FlavorTagSelector';
 import { ImagePickerComponent } from '../../src/components/ImagePickerComponent';
 import { TastingNotes } from '../../src/components/TastingNotes';
 import { showBadgeToast } from '../../src/components/BadgeToast';
@@ -26,8 +26,7 @@ export default function CreatePourScreen() {
   const [reviewType, setReviewType] = useState<'hit' | 'notMyStyle'>('hit');
   const [whyItHit, setWhyItHit] = useState('');
   const [imageUri, setImageUri] = useState<string | undefined>();
-  const [flavorTags, setFlavorTags] = useState<FlavorTag[]>([]);
-  const [selectedFlavorTagIds, setSelectedFlavorTagIds] = useState<string[]>([]);
+  const [selectedFlavorTags, setSelectedFlavorTags] = useState<string[]>([]);
   const [isShared, setIsShared] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [wouldPourAgain, setWouldPourAgain] = useState<string | null>(null);
@@ -57,27 +56,14 @@ export default function CreatePourScreen() {
         setImageUri(passedImageUri);
       }
 
-      const [spiritData, tags] = await Promise.all([
-        apiService.getSpirit(spiritId),
-        apiService.getFlavorTags(),
-      ]);
-
+      const spiritData = await apiService.getSpirit(spiritId);
       setSpirit(spiritData);
-      setFlavorTags(tags ?? []);
     } catch (error) {
       console.error('Failed to load data:', error);
       Alert.alert('Error', 'Failed to load spirit details');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleToggleFlavorTag = (tagId: string) => {
-    setSelectedFlavorTagIds((prev) =>
-      prev?.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...(prev ?? []), tagId]
-    );
   };
 
   const validate = () => {
@@ -152,7 +138,7 @@ export default function CreatePourScreen() {
         whyItHit: whyItHit.trim(),
         isShared: isShared,
         image: imageFileId,
-        flavorTagIds: selectedFlavorTagIds,
+        flavorTags: selectedFlavorTags.length > 0 ? selectedFlavorTags.join(',') : undefined,
         rating: rating ?? undefined,
         wouldPourAgain: wouldPourAgain ?? undefined,
         occasions: occasions.length > 0 ? occasions.join(',') : undefined,
@@ -249,10 +235,10 @@ export default function CreatePourScreen() {
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             <Text style={styles.sectionTitle}>Flavor Tags</Text>
-            <FlavorChips
-              tags={flavorTags}
-              selectedIds={selectedFlavorTagIds}
-              onToggle={handleToggleFlavorTag}
+            <FlavorTagSelector
+              category={spirit?.category}
+              value={selectedFlavorTags}
+              onChange={setSelectedFlavorTags}
             />
 
             <TastingNotes

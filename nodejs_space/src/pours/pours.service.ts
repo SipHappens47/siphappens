@@ -26,6 +26,7 @@ export class PoursService {
         rating: dto.rating,
         wouldpouragain: dto.wouldPourAgain,
         occasions: dto.occasions,
+        flavortagsraw: dto.flavorTags,
         ...(flavorTagIds && {
           flavortags: {
             create: flavorTagIds.map((tagId) => ({
@@ -189,6 +190,7 @@ export class PoursService {
         ...(pourData.rating !== undefined && { rating: pourData.rating }),
         ...(pourData.wouldPourAgain !== undefined && { wouldpouragain: pourData.wouldPourAgain }),
         ...(pourData.occasions !== undefined && { occasions: pourData.occasions }),
+        ...(pourData.flavorTags !== undefined && { flavortagsraw: pourData.flavorTags }),
         ...(flavorTagIds && {
           flavortags: {
             create: flavorTagIds.map((tagId) => ({
@@ -304,10 +306,18 @@ export class PoursService {
             }))
           : undefined,
       },
-      flavorTags: pour.flavortags.map((ft: any) => ({
-        id: ft.flavortag.id,
-        name: ft.flavortag.name,
-      })),
+      // Prefer the denormalized comma-separated tag names (category + custom);
+      // fall back to the legacy join-table tags for older pours.
+      flavorTags: pour.flavortagsraw
+        ? pour.flavortagsraw
+            .split(',')
+            .map((t: string) => t.trim())
+            .filter((t: string) => t.length > 0)
+            .map((name: string) => ({ id: name, name }))
+        : pour.flavortags.map((ft: any) => ({
+            id: ft.flavortag.id,
+            name: ft.flavortag.name,
+          })),
     };
   }
 }

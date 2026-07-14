@@ -241,13 +241,19 @@ export class SpiritsService {
     }
 
     // Community stats for the Explore flow
-    const [totalPourCount, ratingAgg] = await Promise.all([
+    const [totalPourCount, ratingAgg, poursWithTags] = await Promise.all([
       this.prisma.pour.count({ where: { spiritid: id } }),
       this.prisma.pour.aggregate({
         where: { spiritid: id, rating: { not: null } },
         _avg: { rating: true },
       }),
+      this.prisma.pour.findMany({
+        where: { spiritid: id, flavortagsraw: { not: null } },
+        select: { flavortagsraw: true },
+      }),
     ]);
+
+    const communityTags = this.aggregateCommunityTags(poursWithTags);
 
     // Fellow Sippers of the requesting user who have poured this spirit
     let fellowSipperPours: { userId: string; userName: string; profilePhoto: string | null }[] = [];
@@ -282,7 +288,30 @@ export class SpiritsService {
       averageRating:
         ratingAgg._avg.rating != null ? Math.round(ratingAgg._avg.rating * 10) / 10 : null,
       fellowSipperPours,
+      communityTags,
     };
+  }
+
+  // Counts how often each flavour tag appears across pours of a spirit.
+  // Returns { tag, count } sorted by count desc, only tags appearing 2+ times.
+  private aggregateCommunityTags(
+    pours: { flavortagsraw: string | null }[],
+  ): { tag: string; count: number }[] {
+    const counts = new Map<string, number>();
+    for (const pour of pours) {
+      if (!pour.flavortagsraw) continue;
+      const seen = new Set<string>(); // one pour counts a tag once
+      for (const raw of pour.flavortagsraw.split(',')) {
+        const tag = raw.trim();
+        if (!tag || seen.has(tag.toLowerCase())) continue;
+        seen.add(tag.toLowerCase());
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .filter((t) => t.count >= 2)
+      .sort((a, b) => b.count - a.count);
   }
 
   async updateSpirit(id: string, dto: UpdateSpiritDto) {

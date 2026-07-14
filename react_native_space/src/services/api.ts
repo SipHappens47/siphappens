@@ -209,6 +209,7 @@ class ApiService {
     isShared: boolean;
     image?: string;
     flavorTagIds?: string[];
+    flavorTags?: string;
     rating?: number;
     wouldPourAgain?: string;
     occasions?: string;
@@ -247,6 +248,7 @@ class ApiService {
     whyItHit?: string;
     image?: string;
     flavorTagIds?: string[];
+    flavorTags?: string;
     isShared?: boolean;
     rating?: number | null;
     wouldPourAgain?: string | null;

@@ -8,6 +8,7 @@ import { apiService } from '../../src/services/api';
 import { uploadService } from '../../src/services/upload';
 import { Spirit, SpiritRecognitionMatch } from '../../src/types';
 import { FlavorChips } from '../../src/components/FlavorChips';
+import { CommunityFlavorTags } from '../../src/components/CommunityFlavorTags';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { pluralise } from '../../src/utils/strings';
@@ -188,6 +189,9 @@ export default function ExploreResultScreen() {
         ) : (
           <Text style={styles.noNotes}>No official tasting notes yet</Text>
         )}
+
+        {/* What Sippers Taste — weighted community flavour tags */}
+        <CommunityFlavorTags tags={catalogSpirit?.communityTags} />
 
         {/* Community */}
         {inCatalog && (
