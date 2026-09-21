@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { Heading, Landmark } from '../../src/components/semantics';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -16,9 +17,9 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.mainContainer}>
+      <Landmark as="main" style={styles.mainContainer}>
         {/* TOP SECTION - Logo & Title */}
-        <View style={styles.topSection}>
+        <Landmark as="header" style={styles.topSection}>
           <Image 
             source={require('../../assets/icon.png')} 
             style={{ 
@@ -27,15 +28,19 @@ export default function WelcomeScreen() {
               marginBottom: spacing.xl
             }} 
             resizeMode="contain"
+            accessibilityLabel="SipHappens logo"
+            accessible
           />
-          <Text style={styles.title}>SipHappens</Text>
-        </View>
+          <Heading level={1} style={styles.title}>
+            SipHappens
+          </Heading>
+        </Landmark>
 
         {/* MIDDLE SECTION - Text Content */}
         <View style={styles.middleSection}>
-          <Text style={styles.headline}>
+          <Heading level={2} style={styles.headline}>
             Discover the World of Spirits.
-          </Text>
+          </Heading>
           
           <Text style={styles.subtext}>
             Track what you drink.{'\n'}
@@ -49,13 +54,14 @@ export default function WelcomeScreen() {
         </View>
 
         {/* BOTTOM SECTION - Buttons */}
-        <View style={styles.bottomSection}>
+        <Landmark as="nav" style={styles.bottomSection}>
           <Button
             mode="contained"
             onPress={() => router.push('/auth/signup')}
             style={styles.button}
             contentStyle={{ paddingVertical: 12 }}
             labelStyle={{ fontSize: 16, fontWeight: '600' }}
+            accessibilityLabel="Get Started"
           >
             Get Started
           </Button>
@@ -65,11 +71,12 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/auth/login')}
             style={styles.linkButton}
             labelStyle={{ fontSize: 14, color: Colors.textSecondary, fontWeight: '500' }}
+            accessibilityLabel="Already have an account? Log In"
           >
             Already have an account? Log In
           </Button>
-        </View>
-      </View>
+        </Landmark>
+      </Landmark>
     </SafeAreaView>
   );
 }
