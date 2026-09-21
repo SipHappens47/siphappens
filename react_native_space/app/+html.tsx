@@ -20,11 +20,11 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:title" content={`${SITE_NAME} — ${SITE_TAGLINE}`} />
         <meta property="og:description" content={SITE_DESCRIPTION} />
         <meta property="og:url" content={WEB_ORIGIN} />
-        <meta property="og:image" content={`${WEB_ORIGIN}/favicon.png`} />
-        <meta name="twitter:card" content="summary" />
+        <meta property="og:image" content={`${WEB_ORIGIN}/og-image.png`} />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={SITE_NAME} />
         <meta name="twitter:description" content={SITE_DESCRIPTION} />
-        <meta name="twitter:image" content={`${WEB_ORIGIN}/favicon.png`} />
+        <meta name="twitter:image" content={`${WEB_ORIGIN}/og-image.png`} />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>
