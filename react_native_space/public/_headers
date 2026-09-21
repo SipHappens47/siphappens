@@ -5,7 +5,10 @@
   Content-Type: application/xml; charset=utf-8
 
 /favicon.ico
-  Content-Type: image/png
+  Content-Type: image/x-icon
 
 /favicon.png
+  Content-Type: image/png
+
+/og-image.png
   Content-Type: image/png
