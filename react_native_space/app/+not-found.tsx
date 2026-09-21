@@ -11,8 +11,8 @@ export default function UnmatchedRouteScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content} accessibilityRole="main">
-        <Text style={styles.title} accessibilityRole="header" aria-level={1}>
+      <View style={styles.content} role="main">
+        <Text style={styles.title} accessibilityRole="header" role="heading" aria-level={1}>
           Page not found
         </Text>
         <Text style={styles.body}>That link does not match a SipHappens page.</Text>

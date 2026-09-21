@@ -95,6 +95,7 @@ export default function LoginScreen() {
               <Text
                 style={[styles.title, { fontSize: isSmallScreen ? 24 : 32 }]}
                 accessibilityRole="header"
+                role="heading"
                 aria-level={1}
               >
                 Welcome Back

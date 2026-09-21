@@ -16,9 +16,9 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.mainContainer} accessibilityRole="main">
+      <View style={styles.mainContainer} role="main">
         {/* TOP SECTION - Logo & Title */}
-        <View style={styles.topSection} accessibilityRole="banner">
+        <View style={styles.topSection} role="banner">
           <Image 
             source={require('../../assets/icon.png')} 
             style={{ 
@@ -30,14 +30,14 @@ export default function WelcomeScreen() {
             accessibilityLabel="SipHappens logo"
             accessible
           />
-          <Text style={styles.title} accessibilityRole="header" aria-level={1}>
+          <Text style={styles.title} accessibilityRole="header" role="heading" aria-level={1}>
             SipHappens
           </Text>
         </View>
 
         {/* MIDDLE SECTION - Text Content */}
         <View style={styles.middleSection}>
-          <Text style={styles.headline} accessibilityRole="header" aria-level={2}>
+          <Text style={styles.headline} accessibilityRole="header" role="heading" aria-level={2}>
             Discover the World of Spirits.
           </Text>
           
@@ -53,7 +53,7 @@ export default function WelcomeScreen() {
         </View>
 
         {/* BOTTOM SECTION - Buttons */}
-        <View style={styles.bottomSection} accessibilityRole="navigation">
+        <View style={styles.bottomSection} role="navigation">
           <Button
             mode="contained"
             onPress={() => router.push('/auth/signup')}
