@@ -92,13 +92,21 @@ export default function LoginScreen() {
         >
           <View style={styles.content}>
             <View style={[styles.header, { marginBottom: isSmallScreen ? spacing.md : spacing.lg }]}>
-              <Text style={[styles.title, { fontSize: isSmallScreen ? 24 : 32 }]}>Welcome Back</Text>
+              <Text
+                style={[styles.title, { fontSize: isSmallScreen ? 24 : 32 }]}
+                accessibilityRole="header"
+                aria-level={1}
+              >
+                Welcome Back
+              </Text>
               <Text style={[styles.subtitle, { fontSize: isSmallScreen ? 13 : 16 }]}>Log in to continue your journey</Text>
             </View>
 
             <View style={[styles.form, { gap: isSmallScreen ? spacing.sm : spacing.md }]}>
             <TextInput
               label="Email"
+              accessibilityLabel="Email"
+              aria-label="Email"
               value={email}
               onChangeText={(value) => {
                 setEmail(value);
@@ -108,12 +116,16 @@ export default function LoginScreen() {
               style={styles.input}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               error={!!errors?.email || !!authError}
             />
             {errors?.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
             <TextInput
               label="Password"
+              accessibilityLabel="Password"
+              aria-label="Password"
               value={password}
               onChangeText={(value) => {
                 setPassword(value);
@@ -122,10 +134,15 @@ export default function LoginScreen() {
               mode="outlined"
               style={styles.input}
               secureTextEntry={!showPassword}
+              autoComplete="password"
+              textContentType="password"
               right={
                 <TextInput.Icon
                   icon={showPassword ? 'eye-off' : 'eye'}
                   onPress={() => setShowPassword((s) => !s)}
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  accessibilityRole="button"
                 />
               }
               error={!!errors?.password || !!authError}

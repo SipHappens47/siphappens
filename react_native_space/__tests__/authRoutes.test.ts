@@ -15,6 +15,10 @@ describe('isPublicRoute', () => {
     expect(isPublicRoute(['legal', 'privacy'])).toBe(true);
   });
 
+  it('allows the unmatched route screen', () => {
+    expect(isPublicRoute(['+not-found'])).toBe(true);
+  });
+
   it('blocks the protected app shell', () => {
     expect(isPublicRoute(['tabs'])).toBe(false);
     expect(isPublicRoute(['tabs', 'scan'])).toBe(false);

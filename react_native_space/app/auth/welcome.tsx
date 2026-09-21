@@ -16,9 +16,9 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.mainContainer}>
+      <View style={styles.mainContainer} accessibilityRole="main">
         {/* TOP SECTION - Logo & Title */}
-        <View style={styles.topSection}>
+        <View style={styles.topSection} accessibilityRole="banner">
           <Image 
             source={require('../../assets/icon.png')} 
             style={{ 
@@ -27,13 +27,17 @@ export default function WelcomeScreen() {
               marginBottom: spacing.xl
             }} 
             resizeMode="contain"
+            accessibilityLabel="SipHappens logo"
+            accessible
           />
-          <Text style={styles.title}>SipHappens</Text>
+          <Text style={styles.title} accessibilityRole="header" aria-level={1}>
+            SipHappens
+          </Text>
         </View>
 
         {/* MIDDLE SECTION - Text Content */}
         <View style={styles.middleSection}>
-          <Text style={styles.headline}>
+          <Text style={styles.headline} accessibilityRole="header" aria-level={2}>
             Discover the World of Spirits.
           </Text>
           
@@ -49,13 +53,14 @@ export default function WelcomeScreen() {
         </View>
 
         {/* BOTTOM SECTION - Buttons */}
-        <View style={styles.bottomSection}>
+        <View style={styles.bottomSection} accessibilityRole="navigation">
           <Button
             mode="contained"
             onPress={() => router.push('/auth/signup')}
             style={styles.button}
             contentStyle={{ paddingVertical: 12 }}
             labelStyle={{ fontSize: 16, fontWeight: '600' }}
+            accessibilityLabel="Get Started"
           >
             Get Started
           </Button>
@@ -65,6 +70,7 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/auth/login')}
             style={styles.linkButton}
             labelStyle={{ fontSize: 14, color: Colors.textSecondary, fontWeight: '500' }}
+            accessibilityLabel="Already have an account? Log In"
           >
             Already have an account? Log In
           </Button>

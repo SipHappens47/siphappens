@@ -5,5 +5,8 @@
 /favicon.ico /favicon.ico 200
 /og-image.png /og-image.png 200
 
-# Expo SPA shell
+# Expo SPA shell. Unknown paths (and missing files not listed above) are a
+# soft-404: HTTP 200 + index.html. A top-level 404.html would disable
+# Cloudflare Pages' implicit SPA matching and still would not fire while this
+# splat is present. True HTTP 404 needs Pages Functions or dropping /*.
 /* /index.html 200

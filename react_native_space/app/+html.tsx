@@ -1,6 +1,6 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import { type PropsWithChildren } from 'react';
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, WEB_ORIGIN } from '../src/constants/site';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_OG_TITLE, WEB_ORIGIN } from '../src/constants/site';
 
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -17,7 +17,7 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="apple-touch-icon" href="/favicon.png" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content={SITE_NAME} />
-        <meta property="og:title" content={`${SITE_NAME} — ${SITE_TAGLINE}`} />
+        <meta property="og:title" content={SITE_OG_TITLE} />
         <meta property="og:description" content={SITE_DESCRIPTION} />
         <meta property="og:url" content={WEB_ORIGIN} />
         <meta property="og:image" content={`${WEB_ORIGIN}/og-image.png`} />

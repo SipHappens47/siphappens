@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { BadgeToast } from '../src/components/BadgeToast';
 import { theme } from '../src/constants/theme';
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, WEB_ORIGIN } from '../src/constants/site';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_OG_TITLE, WEB_ORIGIN } from '../src/constants/site';
 import { isPublicRoute } from '../src/utils/authRoutes';
 import { StatusBar } from 'expo-status-bar';
 import * as Font from 'expo-font';
@@ -48,11 +48,12 @@ function SeoHead() {
       <link rel="icon" href="/favicon.ico" />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={SITE_NAME} />
-      <meta property="og:title" content={`${SITE_NAME} — ${SITE_TAGLINE}`} />
+      <meta property="og:title" content={SITE_OG_TITLE} />
       <meta property="og:description" content={SITE_DESCRIPTION} />
       <meta property="og:url" content={WEB_ORIGIN} />
-      <meta property="og:image" content={`${WEB_ORIGIN}/favicon.png`} />
-      <meta name="twitter:card" content="summary" />
+      <meta property="og:image" content={`${WEB_ORIGIN}/og-image.png`} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:image" content={`${WEB_ORIGIN}/og-image.png`} />
       <meta name="twitter:title" content={SITE_NAME} />
       <meta name="twitter:description" content={SITE_DESCRIPTION} />
     </Head>
@@ -87,6 +88,7 @@ function RootNavigator() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="admin" />
         <Stack.Screen name="legal" />
+        <Stack.Screen name="+not-found" />
       </Stack>
     </>
   );
