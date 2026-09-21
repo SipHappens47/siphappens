@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Alert, Pressable } from 'react-native';
-import { Text, IconButton, Searchbar, SegmentedButtons } from 'react-native-paper';
+import { Text, Searchbar, SegmentedButtons } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { DiscoverDistilleriesContent } from '../../src/components/DiscoverDistil
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function TheBarScreen() {
   // Allow deep links like /tabs?tab=distilleries (used by onboarding)
@@ -23,17 +24,22 @@ export default function TheBarScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [feedError, setFeedError] = useState<'auth' | 'network' | null>(null);
   const router = useRouter();
+  const { logout } = useAuth();
 
   const loadBarFeed = async () => {
     try {
       setLoading(true);
+      setFeedError(null);
       const data = await apiService.getBarFeed();
       setPours(data ?? []);
     } catch (error: any) {
       console.error('Failed to load The Bar feed:', error?.message ?? error);
-      // Don't show error alert for auth errors (handled by interceptor)
-      if (error?.response?.status !== 401) {
+      if (error?.response?.status === 401) {
+        setFeedError('auth');
+      } else {
+        setFeedError('network');
         const message = error?.response?.data?.message ?? 'Failed to load The Bar feed. Please try again.';
         setTimeout(() => Alert.alert('Error', message), 100);
       }
@@ -100,8 +106,24 @@ export default function TheBarScreen() {
     router.push(`/pour/${pourId}`);
   };
 
+  const handleLoginCta = async () => {
+    await logout();
+    router.replace('/auth/login');
+  };
+
   const renderEmpty = () => {
     if (loading) return null;
+    if (feedError === 'auth') {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>Failed to load The Bar feed</Text>
+          <Text style={styles.emptyText}>Please try again.</Text>
+          <Pressable style={styles.connectButton} onPress={handleLoginCta}>
+            <Text style={styles.connectButtonText}>Log In</Text>
+          </Pressable>
+        </View>
+      );
+    }
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyTitle}>The Bar is quiet</Text>
@@ -120,7 +142,7 @@ export default function TheBarScreen() {
 
   // Shown under the feed while it has 1 or fewer posts: three ways to fill the Bar.
   const renderGettingStarted = () => {
-    if (loading || pours.length > 1) return null;
+    if (loading || feedError || pours.length > 1) return null;
     return (
       <View style={styles.gettingStarted}>
         <View style={styles.actionCard}>

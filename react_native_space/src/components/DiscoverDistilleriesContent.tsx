@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Href, Link, useRouter } from 'expo-router';
 import { apiService } from '../services/api';
 import { DistilleryDiscoverData, DistilleryMapPin } from '../types/distillery';
 import { Colors } from '../constants/colors';
 import { spacing } from '../constants/theme';
+import { useAuth } from '../context/AuthContext';
 
 interface Props {
   searchQuery: string;
@@ -13,8 +14,10 @@ interface Props {
 
 export function DiscoverDistilleriesContent({ searchQuery }: Props) {
   const router = useRouter();
+  const { logout } = useAuth();
   const [data, setData] = useState<DistilleryDiscoverData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
   const [displayPins, setDisplayPins] = useState<DistilleryMapPin[]>([]);
 
   useEffect(() => {
@@ -33,11 +36,15 @@ export function DiscoverDistilleriesContent({ searchQuery }: Props) {
 
   const loadDiscoverData = async () => {
     try {
+      setAuthError(false);
       const result = await apiService.getDistilleriesDiscover();
       setData(result ?? null);
       setDisplayPins(result?.mapPins ?? []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading discover data:', error);
+      if (error?.response?.status === 401) {
+        setAuthError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -60,47 +67,65 @@ export function DiscoverDistilleriesContent({ searchQuery }: Props) {
         isFollowing: d?.isFollowing ?? false,
       }));
       setDisplayPins(pins);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error searching distilleries:', error);
+      if (error?.response?.status === 401) {
+        setAuthError(true);
+      }
       setDisplayPins([]);
     }
   };
 
-  const handleMarkerPress = (distilleryId: string) => {
-    router.push(`/distilleries/${distilleryId}` as any);
+  const handleLoginCta = async () => {
+    await logout();
+    router.replace('/auth/login');
   };
 
   const renderListItem = ({ item }: { item: DistilleryMapPin }) => {
     // Debug logging
     console.log(`[DiscoverDistilleries] ${item?.name} - isClaimed: ${item?.isClaimed}, verified: ${item?.verified}`);
-    
-    return (
-      <TouchableOpacity
-        style={styles.listItem}
-        onPress={() => handleMarkerPress(item?.id ?? '')}
-        activeOpacity={0.7}
-      >
-        <View style={styles.listItemContent}>
-          <MaterialCommunityIcons name="factory" size={32} color={Colors.accent} />
-          <View style={styles.listItemText}>
-            <View style={styles.nameRow}>
-              <Text style={styles.listItemName}>{item?.name ?? 'Unknown'}</Text>
-              {item?.isClaimed && item?.verified && (
-                <MaterialCommunityIcons name="check-decagram" size={18} color={Colors.accent} />
-              )}
-              {item?.isClaimed && !item?.verified && (
-                <View style={styles.pendingBadge}>
-                  <Text style={styles.pendingBadgeText}>Pending Verification</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.listItemLocation}>
-              {item?.region ?? ''}{item?.region && item?.country ? ', ' : ''}{item?.country ?? ''}
-            </Text>
+
+    const distilleryId = item?.id ?? '';
+    const href = `/distilleries/${distilleryId}` as Href;
+
+    const row = (
+      <View style={styles.listItemContent}>
+        <MaterialCommunityIcons name="factory" size={32} color={Colors.accent} />
+        <View style={styles.listItemText}>
+          <View style={styles.nameRow}>
+            <Text style={styles.listItemName}>{item?.name ?? 'Unknown'}</Text>
+            {item?.isClaimed && item?.verified && (
+              <MaterialCommunityIcons name="check-decagram" size={18} color={Colors.accent} />
+            )}
+            {item?.isClaimed && !item?.verified && (
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>Pending Verification</Text>
+              </View>
+            )}
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color={Colors.textMuted} />
+          <Text style={styles.listItemLocation}>
+            {item?.region ?? ''}{item?.region && item?.country ? ', ' : ''}{item?.country ?? ''}
+          </Text>
         </View>
-      </TouchableOpacity>
+        <MaterialCommunityIcons name="chevron-right" size={24} color={Colors.textMuted} />
+      </View>
+    );
+
+    if (!distilleryId) {
+      return <View style={styles.listItem}>{row}</View>;
+    }
+
+    return (
+      <Link href={href} asChild>
+        <Pressable
+          style={styles.listItem}
+          accessibilityRole="link"
+          accessibilityLabel={item?.name ?? 'Unknown'}
+          onPress={() => router.push(href)}
+        >
+          {row}
+        </Pressable>
+      </Link>
     );
   };
 
@@ -108,6 +133,17 @@ export function DiscoverDistilleriesContent({ searchQuery }: Props) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
+
+  if (authError) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No distilleries found</Text>
+        <Pressable style={styles.loginButton} onPress={handleLoginCta}>
+          <Text style={styles.loginButtonText}>Log In</Text>
+        </Pressable>
       </View>
     );
   }
@@ -197,10 +233,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.xxl * 2,
+    paddingHorizontal: spacing.xl,
   },
   emptyText: {
     fontSize: 16,
     color: Colors.textMuted,
     textAlign: 'center',
+  },
+  loginButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    marginTop: spacing.lg,
+  },
+  loginButtonText: {
+    color: Colors.background,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

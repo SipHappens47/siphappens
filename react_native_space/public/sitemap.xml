@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://siphappens-preview.pages.dev/</loc>
+  </url>
+  <url>
+    <loc>https://siphappens-preview.pages.dev/auth/welcome</loc>
+  </url>
+  <url>
+    <loc>https://siphappens-preview.pages.dev/auth/login</loc>
+  </url>
+  <url>
+    <loc>https://siphappens-preview.pages.dev/auth/signup</loc>
+  </url>
+  <url>
+    <loc>https://siphappens-preview.pages.dev/legal/terms</loc>
+  </url>
+  <url>
+    <loc>https://siphappens-preview.pages.dev/legal/privacy</loc>
+  </url>
+</urlset>
