@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { Heading, Landmark } from '../../src/components/semantics';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -16,9 +17,9 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.mainContainer} role="main">
+      <Landmark as="main" style={styles.mainContainer}>
         {/* TOP SECTION - Logo & Title */}
-        <View style={styles.topSection} role="banner">
+        <Landmark as="header" style={styles.topSection}>
           <Image 
             source={require('../../assets/icon.png')} 
             style={{ 
@@ -30,16 +31,16 @@ export default function WelcomeScreen() {
             accessibilityLabel="SipHappens logo"
             accessible
           />
-          <Text style={styles.title} accessibilityRole="header" role="heading" aria-level={1}>
+          <Heading level={1} style={styles.title}>
             SipHappens
-          </Text>
-        </View>
+          </Heading>
+        </Landmark>
 
         {/* MIDDLE SECTION - Text Content */}
         <View style={styles.middleSection}>
-          <Text style={styles.headline} accessibilityRole="header" role="heading" aria-level={2}>
+          <Heading level={2} style={styles.headline}>
             Discover the World of Spirits.
-          </Text>
+          </Heading>
           
           <Text style={styles.subtext}>
             Track what you drink.{'\n'}
@@ -53,7 +54,7 @@ export default function WelcomeScreen() {
         </View>
 
         {/* BOTTOM SECTION - Buttons */}
-        <View style={styles.bottomSection} role="navigation">
+        <Landmark as="nav" style={styles.bottomSection}>
           <Button
             mode="contained"
             onPress={() => router.push('/auth/signup')}
@@ -74,8 +75,8 @@ export default function WelcomeScreen() {
           >
             Already have an account? Log In
           </Button>
-        </View>
-      </View>
+        </Landmark>
+      </Landmark>
     </SafeAreaView>
   );
 }

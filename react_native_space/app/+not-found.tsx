@@ -1,20 +1,21 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../src/constants/colors';
 import { spacing } from '../src/constants/theme';
+import { Heading, Landmark } from '../src/components/semantics';
 
 export default function UnmatchedRouteScreen() {
   const router = useRouter();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content} role="main">
-        <Text style={styles.title} accessibilityRole="header" role="heading" aria-level={1}>
+      <Landmark as="main" style={styles.content}>
+        <Heading level={1} style={styles.title}>
           Page not found
-        </Text>
+        </Heading>
         <Text style={styles.body}>That link does not match a SipHappens page.</Text>
         <Button
           mode="contained"
@@ -24,7 +25,7 @@ export default function UnmatchedRouteScreen() {
         >
           Go home
         </Button>
-      </View>
+      </Landmark>
     </SafeAreaView>
   );
 }

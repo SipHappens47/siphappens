@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
-import { Text, TextInput, Button, Snackbar } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, useWindowDimensions, TextInput as RNTextInput } from 'react-native';
+import { Text, TextInput, Button, Snackbar, IconButton } from 'react-native-paper';
 import { useRouter, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
@@ -8,6 +8,35 @@ import { playIceSound } from '../../src/utils/sound';
 import { getApiErrorMessage } from '../../src/utils/errors';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { Heading } from '../../src/components/semantics';
+
+const EMAIL_FIELD_ID = 'login-email';
+const PASSWORD_FIELD_ID = 'login-password';
+
+function hideVisually(): React.CSSProperties {
+  return {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    padding: 0,
+    margin: -1,
+    overflow: 'hidden',
+    clip: 'rect(0, 0, 0, 0)',
+    whiteSpace: 'nowrap',
+    borderWidth: 0,
+  };
+}
+
+function nativeField(id: string, name: string) {
+  return (props: Record<string, unknown>) => (
+    <RNTextInput
+      {...props}
+      nativeID={id}
+      accessibilityLabel={name}
+      {...(Platform.OS === 'web' ? { id, 'aria-label': name } : null)}
+    />
+  );
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -92,22 +121,19 @@ export default function LoginScreen() {
         >
           <View style={styles.content}>
             <View style={[styles.header, { marginBottom: isSmallScreen ? spacing.md : spacing.lg }]}>
-              <Text
-                style={[styles.title, { fontSize: isSmallScreen ? 24 : 32 }]}
-                accessibilityRole="header"
-                role="heading"
-                aria-level={1}
-              >
+              <Heading level={1} style={[styles.title, { fontSize: isSmallScreen ? 24 : 32 }]}>
                 Welcome Back
-              </Text>
+              </Heading>
               <Text style={[styles.subtitle, { fontSize: isSmallScreen ? 13 : 16 }]}>Log in to continue your journey</Text>
             </View>
 
             <View style={[styles.form, { gap: isSmallScreen ? spacing.sm : spacing.md }]}>
+            {Platform.OS === 'web'
+              ? React.createElement('label', { htmlFor: EMAIL_FIELD_ID, style: hideVisually() }, 'Email')
+              : null}
             <TextInput
               label="Email"
               accessibilityLabel="Email"
-              aria-label="Email"
               value={email}
               onChangeText={(value) => {
                 setEmail(value);
@@ -120,34 +146,39 @@ export default function LoginScreen() {
               autoComplete="email"
               textContentType="emailAddress"
               error={!!errors?.email || !!authError}
+              render={nativeField(EMAIL_FIELD_ID, 'Email')}
             />
             {errors?.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-            <TextInput
-              label="Password"
-              accessibilityLabel="Password"
-              aria-label="Password"
-              value={password}
-              onChangeText={(value) => {
-                setPassword(value);
-                if (authError) setAuthError(null);
-              }}
-              mode="outlined"
-              style={styles.input}
-              secureTextEntry={!showPassword}
-              autoComplete="password"
-              textContentType="password"
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowPassword((s) => !s)}
-                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  accessibilityRole="button"
-                />
-              }
-              error={!!errors?.password || !!authError}
-            />
+            {Platform.OS === 'web'
+              ? React.createElement('label', { htmlFor: PASSWORD_FIELD_ID, style: hideVisually() }, 'Password')
+              : null}
+            <View>
+              <TextInput
+                label="Password"
+                accessibilityLabel="Password"
+                value={password}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (authError) setAuthError(null);
+                }}
+                mode="outlined"
+                style={styles.input}
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
+                contentStyle={styles.passwordInput}
+                error={!!errors?.password || !!authError}
+                render={nativeField(PASSWORD_FIELD_ID, 'Password')}
+              />
+              <IconButton
+                icon={showPassword ? 'eye-off' : 'eye'}
+                onPress={() => setShowPassword((s) => !s)}
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                style={styles.eyeButton}
+                iconColor={Colors.textSecondary}
+              />
+            </View>
             {errors?.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
             {authError ? (
@@ -237,6 +268,15 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: Colors.surface,
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 0,
+    top: 4,
+    margin: 0,
   },
   errorText: {
     color: Colors.error,
