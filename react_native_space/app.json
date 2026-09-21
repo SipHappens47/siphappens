@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "abacusai1772133303",
     "userInterfaceStyle": "light",
+    "description": "Discover the World of Spirits. Track what you drink. Discover what you'll love. Build your own spirits universe.",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -90,6 +91,10 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/icon.png"
     },
     "extra": {
       "router": {},

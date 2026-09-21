@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, useWindowDimensions } from 'react-native';
-import { Text, TextInput, Button } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { Text, TextInput, Button, Snackbar } from 'react-native-paper';
 import { useRouter, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { playIceSound } from '../../src/utils/sound';
+import { getApiErrorMessage } from '../../src/utils/errors';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
@@ -14,6 +15,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [authError, setAuthError] = useState<string | null>(null);
   
   const { user, login } = useAuth();
   const router = useRouter();
@@ -53,6 +55,7 @@ export default function LoginScreen() {
     }
 
     console.log('[Login] Starting login process...');
+    setAuthError(null);
     setLoading(true);
     try {
       console.log('[Login] Attempting login with email:', email.trim());
@@ -67,9 +70,8 @@ export default function LoginScreen() {
       router.replace('/tabs');
     } catch (error: any) {
       console.error('[Login] Login failed:', error?.response?.status, error?.response?.data, error?.message);
-      Alert.alert(
-        'Login Failed',
-        error?.response?.data?.message ?? error?.message ?? 'Invalid email or password. Please try again.'
+      setAuthError(
+        getApiErrorMessage(error, 'Invalid email or password. Please try again.'),
       );
     } finally {
       setLoading(false);
@@ -98,19 +100,25 @@ export default function LoginScreen() {
             <TextInput
               label="Email"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(value) => {
+                setEmail(value);
+                if (authError) setAuthError(null);
+              }}
               mode="outlined"
               style={styles.input}
               keyboardType="email-address"
               autoCapitalize="none"
-              error={!!errors?.email}
+              error={!!errors?.email || !!authError}
             />
             {errors?.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
             <TextInput
               label="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+                if (authError) setAuthError(null);
+              }}
               mode="outlined"
               style={styles.input}
               secureTextEntry={!showPassword}
@@ -120,9 +128,19 @@ export default function LoginScreen() {
                   onPress={() => setShowPassword((s) => !s)}
                 />
               }
-              error={!!errors?.password}
+              error={!!errors?.password || !!authError}
             />
             {errors?.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+            {authError ? (
+              <Text
+                style={styles.authErrorText}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+              >
+                {authError}
+              </Text>
+            ) : null}
 
             <Button
               mode="contained"
@@ -156,6 +174,14 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Snackbar
+        visible={!!authError}
+        onDismiss={() => setAuthError(null)}
+        duration={6000}
+        style={styles.snackbar}
+      >
+        {authError}
+      </Snackbar>
     </SafeAreaView>
   );
 }
@@ -198,6 +224,14 @@ const styles = StyleSheet.create({
     color: Colors.error,
     fontSize: 12,
     marginTop: -spacing.sm,
+  },
+  authErrorText: {
+    color: Colors.error,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  snackbar: {
+    backgroundColor: Colors.error,
   },
   button: {
     marginTop: spacing.sm,
