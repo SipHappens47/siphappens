@@ -94,6 +94,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   topSection: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     paddingTop: spacing.md + 19,
   },
