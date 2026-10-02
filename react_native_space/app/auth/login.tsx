@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { playIceSound } from '../../src/utils/sound';
 import { getApiErrorMessage } from '../../src/utils/errors';
+import { SESSION_EXPIRED_MESSAGE } from '../../src/services/api';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { Heading } from '../../src/components/semantics';
@@ -46,7 +47,7 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [authError, setAuthError] = useState<string | null>(null);
   
-  const { user, login } = useAuth();
+  const { user, login, sessionExpired } = useAuth();
   const router = useRouter();
   const { height } = useWindowDimensions();
   
@@ -125,6 +126,9 @@ export default function LoginScreen() {
                 Welcome Back
               </Heading>
               <Text style={[styles.subtitle, { fontSize: isSmallScreen ? 13 : 16 }]}>Log in to continue your journey</Text>
+              {sessionExpired && !authError ? (
+                <Text style={styles.sessionText} accessibilityLiveRegion="polite">{SESSION_EXPIRED_MESSAGE}</Text>
+              ) : null}
             </View>
 
             <View style={[styles.form, { gap: isSmallScreen ? spacing.sm : spacing.md }]}>
@@ -262,6 +266,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: Colors.textSecondary,
+  },
+  sessionText: {
+    color: Colors.text,
+    fontSize: 14,
+    marginTop: spacing.sm,
   },
   form: {
     gap: spacing.md,

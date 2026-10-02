@@ -7,7 +7,7 @@ import { Colors } from '../src/constants/colors';
 import { ONBOARDING_COMPLETE_KEY } from './onboarding';
 
 export default function Index() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, sessionExpired } = useAuth();
   const router = useRouter();
   const hasNavigated = useRef(false);
 
@@ -34,6 +34,8 @@ export default function Index() {
         // Always redirect to tabs for both users and distillery accounts
         console.log('[Index] Redirecting to /tabs');
         router.replace('/tabs');
+      } else if (sessionExpired) {
+        router.replace('/auth/login');
       } else {
         console.log('[Index] Redirecting to /auth/welcome');
         router.replace('/auth/welcome');

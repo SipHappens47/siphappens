@@ -22,9 +22,33 @@ const API_URL = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL, Constants?.expoCo
 
 console.log('[ApiService] API_URL:', API_URL);
 
+// These endpoints answer 401 for a wrong password or code; their screens show
+// that error themselves, so it must not be treated as an expired session.
+const CREDENTIAL_ENDPOINTS = ['/api/auth/login', '/api/signup', '/api/auth/forgot-password', '/api/auth/reset-password'];
+export const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please log in again.';
+
+async function readStoredToken(): Promise<string | null> {
+  return Platform.OS === 'web'
+    ? await AsyncStorage.getItem('authToken')
+    : await SecureStore.getItemAsync('authToken');
+}
+
+function requestPath(url?: string): string {
+  try {
+    return new URL(url ?? '', API_URL).pathname;
+  } catch {
+    return '';
+  }
+}
+
 class ApiService {
   private client: AxiosInstance;
+  private onSessionExpired: (() => void) | null = null;
 
+  /** Called once per rejected stored token (AuthContext signs the user out). */
+  setSessionExpiredHandler(handler: (() => void) | null) {
+    this.onSessionExpired = handler;
+  }
   constructor() {
     console.log('[ApiService] Initializing with API_URL:', API_URL);
     
@@ -42,9 +66,7 @@ class ApiService {
       async (config) => {
         console.log('[ApiService] Request:', config.method?.toUpperCase(), config.url);
         try {
-          const token = Platform.OS === 'web'
-            ? await AsyncStorage.getItem('authToken')
-            : await SecureStore.getItemAsync('authToken');
+          const token = await readStoredToken();
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
             console.log('[ApiService] Added auth token to request');
@@ -65,9 +87,9 @@ class ApiService {
         console.log('[ApiService] Response:', response.status, response.config.url);
         return response;
       },
-      // Note: we deliberately do NOT clear the auth token on 401 here. The user
-      // stays logged in until they tap Log Out; the startup session check is the
-      // only place that signs out on a genuinely rejected token.
+      // A 401 for the token we currently hold means the session has expired:
+      // hand it to the session-expired handler (sign out, go to login). Timeouts
+      // and other errors never sign the user out.
       async (error: AxiosError) => {
         console.error('[ApiService] Response error:', {
           status: error?.response?.status,
@@ -75,6 +97,24 @@ class ApiService {
           message: error?.message,
           data: error?.response?.data
         });
+        if (error?.response?.status === 401 && this.onSessionExpired) {
+          const sent = (error.config?.headers as any)?.Authorization;
+          if (sent && !CREDENTIAL_ENDPOINTS.includes(requestPath(error.config?.url))) {
+            let current: string | null = null;
+            try {
+              current = await readStoredToken();
+            } catch {
+              current = null;
+            }
+            // Ignore late failures from a token that was already replaced or cleared.
+            if (current && sent === `Bearer ${current}`) {
+              if (error.response.data && typeof error.response.data === 'object') {
+                (error.response.data as any).message = SESSION_EXPIRED_MESSAGE;
+              }
+              this.onSessionExpired();
+            }
+          }
+        }
         return Promise.reject(error);
       }
     );
