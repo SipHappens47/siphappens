@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { sendEmail } from '../lib/email';
+import { isReservedAdminSignup } from '../admin/admin.service';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +19,10 @@ export class AuthService {
 
     if (!ageVerified) {
       throw new BadRequestException('Age verification is required');
+    }
+
+    if (isReservedAdminSignup(email)) {
+      throw new BadRequestException('This email address is reserved');
     }
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
