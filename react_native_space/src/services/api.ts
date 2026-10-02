@@ -7,13 +7,20 @@ import { AuthResponse, User, Spirit, Pour, FlavorTag, Distillery, SpiritRecognit
 import { DistilleryProfile, DistilleryDiscoverData, DistilleryPour, DistillerySpirit, DistilleryAnalytics } from '../types/distillery';
 
 // Cloud backend (NestJS on Render). Reachable from any device, no PC required.
-// For local development against the PC, swap to 'http://10.0.0.3:3000/'.
-const API_URL = 'https://siphappens.onrender.com/';
+// A build can point elsewhere by setting EXPO_PUBLIC_API_URL (for example in an
+// eas.json build profile's "env"); otherwise app.json extra.apiUrl, then production.
+export const DEFAULT_API_URL = 'https://siphappens.onrender.com/';
 
-console.log('='.repeat(60));
-console.log('[ApiService] USING HARDCODED PRODUCTION API URL');
+export function resolveApiUrl(envUrl?: string, extraUrl?: unknown): string {
+  for (const candidate of [envUrl, extraUrl]) {
+    if (typeof candidate === 'string' && /^https?:\/\/\S+$/.test(candidate.trim())) return candidate.trim();
+  }
+  return DEFAULT_API_URL;
+}
+
+const API_URL = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL, Constants?.expoConfig?.extra?.apiUrl);
+
 console.log('[ApiService] API_URL:', API_URL);
-console.log('='.repeat(60));
 
 class ApiService {
   private client: AxiosInstance;
