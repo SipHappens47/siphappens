@@ -18,11 +18,15 @@ import { Badge, TasteSummary, User } from '../../src/types';
 import { useLoadSection } from '../../src/hooks/useLoadSection';
 import { LoadNotice } from '../../src/components/LoadNotice';
 import * as DocumentPicker from 'expo-document-picker';
+import { ADMIN_EMAIL } from '../../src/constants/admin';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isDistillery = user?.isDistilleryAccount ?? false;
+  // The hidden seed dialog is only for the SipHappens admin account (the
+  // backend refuses seed calls from anyone else).
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   // CRITICAL: Distillery accounts should see their fancy distillery page, not simple profile
   useEffect(() => {
@@ -76,6 +80,7 @@ export default function ProfileScreen() {
   }, [isDistillery, scope]));
 
   const handleVersionTap = () => {
+    if (!isAdmin) return;
     const newTapCount = tapCount + 1;
     setTapCount(newTapCount);
 
@@ -306,7 +311,7 @@ export default function ProfileScreen() {
 
       {/* Admin Seed Dialog */}
       <Portal>
-        <Dialog visible={showAdminDialog} onDismiss={() => setShowAdminDialog(false)}>
+        <Dialog visible={isAdmin && showAdminDialog} onDismiss={() => setShowAdminDialog(false)}>
           <Dialog.Title>🌾 Spirit Database Seed</Dialog.Title>
           <Dialog.Content>
             <Text style={styles.dialogText}>
