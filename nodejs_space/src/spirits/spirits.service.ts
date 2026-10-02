@@ -23,9 +23,10 @@ export class SpiritsService {
   }
 
   // Per-user daily cap on AI scans so a single account can't exhaust the shared
-  // Gemini quota for everyone. Counts attempts (not just successes) to prevent
-  // retry-spam. Configurable via SCAN_DAILY_LIMIT (default 30).
-  private async enforceScanQuota(userId: string) {
+  // Gemini quota for everyone. An attempt is counted up front (so parallel
+  // retries can't exceed the cap) and refunded if recognition fails.
+  // Configurable via SCAN_DAILY_LIMIT (default 30). Returns the counted day.
+  private async enforceScanQuota(userId: string): Promise<string> {
     const limit = parseInt(process.env.SCAN_DAILY_LIMIT || '30', 10);
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
 
@@ -49,10 +50,24 @@ export class SpiritsService {
       where: { id: userId },
       data: { dailyscancount: usedToday + 1, dailyscandate: today },
     });
+    return today;
+  }
+
+  // Give back a scan whose recognition failed. Only touches the day it was
+  // counted on, never goes below zero, and never masks the original error.
+  private async refundScan(userId: string, day: string) {
+    try {
+      await this.prisma.user.updateMany({
+        where: { id: userId, dailyscandate: day, dailyscancount: { gt: 0 } },
+        data: { dailyscancount: { decrement: 1 } },
+      });
+    } catch (err: any) {
+      this.logger.warn(`Scan refund failed for ${userId}: ${err?.message}`);
+    }
   }
 
   async recognizeBottle(userId: string, dto: RecognizeBottleDto) {
-    await this.enforceScanQuota(userId);
+    const scanDay = await this.enforceScanQuota(userId);
     try {
       const { image } = dto;
 
@@ -138,6 +153,7 @@ export class SpiritsService {
       return result;
     } catch (error) {
       this.logger.error('Bottle recognition error:', error);
+      await this.refundScan(userId, scanDay);
       throw error;
     }
   }

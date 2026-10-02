@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -259,7 +260,9 @@ export class AuthService {
     if (distilleryId) {
       payload.distilleryId = distilleryId;
     }
-    return this.jwtService.sign(payload, { expiresIn: '3650d' });
+    // 30 days (was 10 years). The app signs out on a 401 at its startup
+    // session check; logout-all and password reset still revoke earlier.
+    return this.jwtService.sign(payload, { expiresIn: '30d' });
   }
 
   // Invalidate every existing token for a user (logout-everywhere). Bumping the
@@ -278,7 +281,7 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (user) {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = randomInt(100000, 1000000).toString(); // CSPRNG, 6 digits
       const codeHash = await bcrypt.hash(code, 10);
       const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
