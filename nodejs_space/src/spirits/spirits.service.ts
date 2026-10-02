@@ -347,8 +347,9 @@ export class SpiritsService {
         .map((c) => (c.initiatorid === requestingUserId ? c.receiverid : c.initiatorid))
         .filter((id) => !hiddenUserIds.has(id));
       if (friendIds.length > 0) {
+        // Only pours the friend shared: an unshared pour is private to its owner.
         const friendPours = await this.prisma.pour.findMany({
-          where: { spiritid: id, userid: { in: friendIds } },
+          where: { spiritid: id, userid: { in: friendIds }, isshared: true },
           select: { user: { select: { id: true, name: true, profilephoto: true } } },
           distinct: ['userid'],
         });

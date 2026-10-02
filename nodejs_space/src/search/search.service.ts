@@ -51,12 +51,8 @@ export class SearchService {
           { id: { not: currentUserId } },
           // Verified distillery owners appear in results as their distillery, not as a user
           { owneddistillery: { none: { verified: true } } },
-          {
-            OR: [
-              { name: { contains: searchTerm, mode: 'insensitive' } },
-              { email: { contains: searchTerm, mode: 'insensitive' } },
-            ],
-          },
+          // Names only: matching email fragments would let anyone probe who has an account.
+          { name: { contains: searchTerm, mode: 'insensitive' } },
           { id: { notIn: hiddenUserIds } },
         ],
       },

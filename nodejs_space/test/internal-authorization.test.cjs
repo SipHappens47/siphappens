@@ -131,8 +131,8 @@ function searchFixture() {
       const [self, owner, matching] = userQuery.where.AND;
       assert.deepEqual(owner, { owneddistillery: { none: { verified: true } } });
       return people.filter((user) => user.id !== self.id.not && !user.verifiedOwner &&
-        matching.OR.some((filter) => Object.entries(filter).some(([key, condition]) =>
-          user[key].toLowerCase().includes(condition.contains.toLowerCase()))));
+        Object.entries(matching).every(([key, condition]) =>
+          user[key].toLowerCase().includes(condition.contains.toLowerCase())));
     } },
     spirit: { findMany: async () => [] },
     distillery: { findMany: async () => [] },
@@ -143,7 +143,7 @@ function searchFixture() {
   return { service: new SearchService(prisma), query: () => userQuery };
 }
 
-for (const query of [' Bob ', 'bob@example.invalid']) {
+for (const query of [' Bob ']) {
   test(`search: ${query.trim()} retains public identity and navigation ID without email`, async () => {
     const fixture = searchFixture();
     const results = plain(await fixture.service.universalSearch(query, 'alice'));
@@ -156,6 +156,14 @@ for (const query of [' Bob ', 'bob@example.invalid']) {
     assert.deepEqual(results.spirits, []);
   });
 }
+
+test('search: an email or email fragment matches nobody (batch 3)', async () => {
+  for (const query of ['bob@example.invalid', 'example.invalid', '@example']) {
+    const fixture = searchFixture();
+    assert.deepEqual(plain((await fixture.service.universalSearch(query, 'alice')).users), [], query);
+    assert.equal(JSON.stringify(fixture.query().where).includes('email'), false);
+  }
+});
 
 test('search: nonmatching query stays empty', async () => {
   const fixture = searchFixture();

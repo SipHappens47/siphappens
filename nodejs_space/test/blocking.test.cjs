@@ -106,7 +106,7 @@ for (const [viewer, target, label] of PAIRS) {
     const prisma = world({ connections: [conn('pending', target, viewer, 'Pending')] });
     const s = services(prisma);
     await assert.rejects(s.connections.sendConnectionRequestById(viewer, target), NotFoundException);
-    await assert.rejects(s.connections.sendConnectionRequest(viewer, `${people[target].name.split(' ')[0].toLowerCase()}@example.invalid`), NotFoundException);
+    await assert.rejects(s.connections.sendConnectionRequest(viewer, people[target].name), NotFoundException);
     await assert.rejects(s.connections.acceptConnectionRequest(viewer, 'pending'), NotFoundException);
     await assert.rejects(s.cheers.addCheer(viewer, `pour-${target}`), NotFoundException);
     assert.equal(prisma.calls('connection', 'create').length, 0);

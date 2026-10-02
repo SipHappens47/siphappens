@@ -11,7 +11,7 @@ export class ConnectionsService {
     private profileService: ProfileService,
   ) {}
 
-  // Search users by name or email
+  // Search users by name
   async searchUsers(currentUserId: string, query: string) {
     if (!query || query.trim().length < 2) {
       return [];
@@ -25,21 +25,12 @@ export class ConnectionsService {
           { id: { notIn: hiddenUserIds } }, // Exclude anyone blocked either way
           { isofficial: false }, // Exclude official account from connection search
           { owneddistillery: { none: { verified: true } } }, // Verified distillery owners appear as their distillery, not as sippers
+          // Names only: matching email fragments would let anyone probe who has an account.
           {
-            OR: [
-              {
-                name: {
-                  contains: query.trim(),
-                  mode: 'insensitive',
-                },
-              },
-              {
-                email: {
-                  contains: query.trim(),
-                  mode: 'insensitive',
-                },
-              },
-            ],
+            name: {
+              contains: query.trim(),
+              mode: 'insensitive',
+            },
           },
         ],
       },
@@ -162,51 +153,40 @@ export class ConnectionsService {
     return this.formatConnectionResponse(connection);
   }
 
-  // Send a connection request by email or name
+  // Send a connection request by exact name. Emails are not looked up: that
+  // would tell anyone which addresses have accounts, and no app screen uses it.
   async sendConnectionRequest(initiatorId: string, receiverIdentifier: string) {
     if (!receiverIdentifier) {
-      throw new BadRequestException('Name or email is required');
+      throw new BadRequestException('Name is required');
     }
 
     const identifier = receiverIdentifier.trim();
 
-    // Try to find receiver by email first
-    let receiver = await this.prisma.user.findUnique({
-      where: { email: identifier },
+    const usersByName = await this.prisma.user.findMany({
+      where: {
+        name: {
+          equals: identifier,
+          mode: 'insensitive',
+        },
+      },
+      take: 2, // Take 2 to check if there are multiple matches
     });
 
-    // If not found by email, try searching by name
-    if (!receiver) {
-      const usersByName = await this.prisma.user.findMany({
-        where: {
-          name: {
-            equals: identifier,
-            mode: 'insensitive',
-          },
-        },
-        take: 2, // Take 2 to check if there are multiple matches
-      });
-
-      if (usersByName.length === 0) {
-        throw new NotFoundException('User not found with that name or email');
-      }
-
-      if (usersByName.length > 1) {
-        throw new BadRequestException('Multiple users found with that name. Please use their email address instead.');
-      }
-
-      receiver = usersByName[0];
+    if (usersByName.length === 0) {
+      throw new NotFoundException('User not found with that name');
     }
 
-    if (!receiver) {
-      throw new NotFoundException('User not found');
+    if (usersByName.length > 1) {
+      throw new BadRequestException('Multiple users found with that name. Search for them and send the request from their profile.');
     }
+
+    const receiver = usersByName[0];
 
     if (receiver.id === initiatorId) {
       throw new BadRequestException('Cannot connect with yourself');
     }
 
-    await assertNotBlocked(this.prisma, initiatorId, receiver.id, 'User not found with that name or email');
+    await assertNotBlocked(this.prisma, initiatorId, receiver.id, 'User not found with that name');
 
     // Check if connection already exists (in either direction)
     const existingConnection = await this.prisma.connection.findFirst({

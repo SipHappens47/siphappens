@@ -3,8 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class SendConnectionRequestDto {
   @ApiProperty({ 
-    example: 'friend@example.com',
-    description: 'User name or email address'
+    example: 'Jane Sipper',
+    description: 'Exact user name (field name kept for older app versions; emails are not looked up)'
   })
   @IsString()
   @IsNotEmpty()
