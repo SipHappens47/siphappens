@@ -14,6 +14,8 @@ import { DistilleryProfile, DistilleryPour, DistillerySpirit } from '../../src/t
 import { BarPourCard } from '../../src/components/BarPourCard';
 import { useAuth } from '../../src/context/AuthContext';
 import { Pour } from '../../src/types';
+import { useLoadSection } from '../../src/hooks/useLoadSection';
+import { LoadNotice } from '../../src/components/LoadNotice';
 import { PourCard } from '../../src/components/PourCard';
 
 export default function DistilleryProfileScreen() {
@@ -24,45 +26,27 @@ export default function DistilleryProfileScreen() {
   const distilleryId = Array.isArray(params.distilleryId) ? params.distilleryId[0] : params.distilleryId ?? '';
   const isOwner = user?.distilleryId === distilleryId && user?.isDistilleryAccount;
   
-  const [loading, setLoading] = useState(true);
+  const scope = user && distilleryId ? `${user.id}:${distilleryId}` : null;
+  const profileSection = useLoadSection<DistilleryProfile>(scope, true);
+  const pourSection = useLoadSection<DistilleryPour[]>(scope);
+  const spiritSection = useLoadSection<DistillerySpirit[]>(scope);
+  const profile = profileSection.data;
+  const pours = pourSection.data ?? [];
+  const spirits = spiritSection.data ?? [];
+  const setProfile = profileSection.setData;
+  const setPours = pourSection.setData;
+  const setSpirits = spiritSection.setData;
   const [refreshing, setRefreshing] = useState(false);
-  const [profile, setProfile] = useState<DistilleryProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'pours' | 'shelf'>('shelf');
-  const [pours, setPours] = useState<DistilleryPour[]>([]);
-  const [spirits, setSpirits] = useState<DistillerySpirit[]>([]);
   const [followLoading, setFollowLoading] = useState(false);
 
-  useEffect(() => {
-    if (distilleryId) {
-      loadDistilleryData();
-    }
-  }, [distilleryId]);
-
+  const loadPours = () => pourSection.load(() => apiService.getDistilleryPours(distilleryId));
+  const loadSpirits = () => spiritSection.load(() => apiService.getDistillerySpirits(distilleryId));
   const loadDistilleryData = async () => {
-    try {
-      setLoading(true);
-      const profileData = await apiService.getDistilleryProfile(distilleryId);
-      
-      // Debug logging
-      console.log(`[DistilleryProfile] ${profileData?.name} - isClaimed: ${profileData?.isClaimed}, verified: ${profileData?.verified}`);
-      
-      setProfile(profileData);
-      
-      // Load distillery pours
-      const poursData = await apiService.getDistilleryPours(distilleryId);
-      setPours(poursData ?? []);
-      
-      // Load spirits for shelf
-      const spiritsData = await apiService.getDistillerySpirits(distilleryId);
-      setSpirits(spiritsData ?? []);
-    } catch (error: any) {
-      console.error('Failed to load distillery:', error);
-      Alert.alert('Error', 'Failed to load distillery profile');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    await Promise.all([profileSection.load(() => apiService.getDistilleryProfile(distilleryId)), loadPours(), loadSpirits()]);
+    setRefreshing(false);
   };
+  useEffect(() => { loadDistilleryData(); }, [scope]);
 
   const handleTabChange = (tab: 'pours' | 'shelf') => {
     setActiveTab(tab);
@@ -150,25 +134,13 @@ export default function DistilleryProfileScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.accent} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   if (!profile) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Distillery not found</Text>
-          <Button mode="contained" onPress={() => router.back()}>Go Back</Button>
-        </View>
-      </SafeAreaView>
-    );
+    return <SafeAreaView style={styles.container}>
+      <View style={styles.errorContainer}>
+        <LoadNotice name="Distillery" section={{ ...profileSection, retry: loadDistilleryData }} />
+        <Button mode="contained" onPress={() => router.back()}>Go Back</Button>
+      </View>
+    </SafeAreaView>;
   }
 
   return (
@@ -178,6 +150,7 @@ export default function DistilleryProfileScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={loadDistilleryData} tintColor={Colors.accent} />
         }
       >
+        <LoadNotice name="Distillery" section={{ ...profileSection, retry: loadDistilleryData }} />
         {/* Hero Image */}
         {profile.heroImage ? (
           <Image
@@ -319,14 +292,15 @@ export default function DistilleryProfileScreen() {
         </View>
 
         {/* Tab Content */}
+        <LoadNotice name={activeTab === 'pours' ? 'distillery pours' : 'distillery shelf'} section={{ ...(activeTab === 'pours' ? pourSection : spiritSection), retry: activeTab === 'pours' ? loadPours : loadSpirits }} />
         {activeTab === 'pours' ? (
           <View style={styles.tabContent}>
-            {pours.length === 0 ? (
+            {pours.length === 0 ? (pourSection.data !== undefined && !pourSection.error ? (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="glass-cocktail" size={60} color={Colors.textMuted} />
                 <Text style={styles.emptyText}>No pours yet</Text>
               </View>
-            ) : (
+            ) : null) : (
               pours.map((pour) => (
                 <BarPourCard
                   key={pour.id}
@@ -342,12 +316,12 @@ export default function DistilleryProfileScreen() {
           </View>
         ) : activeTab === 'shelf' ? (
           <View style={styles.spiritsGrid}>
-            {spirits.length === 0 ? (
+            {spirits.length === 0 ? (spiritSection.data !== undefined && !spiritSection.error ? (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="bottle-wine" size={60} color={Colors.textMuted} />
                 <Text style={styles.emptyText}>No spirits yet</Text>
               </View>
-            ) : (
+            ) : null) : (
               spirits.map((spirit) => (
                 <Pressable
                   key={spirit.id}

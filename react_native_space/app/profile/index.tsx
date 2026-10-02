@@ -14,7 +14,9 @@ import { JourneyMapSection } from '../../src/components/gamification/JourneyMapS
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { pluralWord } from '../../src/utils/strings';
-import { Badge, TasteSummary } from '../../src/types';
+import { Badge, TasteSummary, User } from '../../src/types';
+import { useLoadSection } from '../../src/hooks/useLoadSection';
+import { LoadNotice } from '../../src/components/LoadNotice';
 import * as DocumentPicker from 'expo-document-picker';
 
 export default function ProfileScreen() {
@@ -30,86 +32,48 @@ export default function ProfileScreen() {
     }
   }, [isDistillery, user?.distilleryId]);
 
-  const [name, setName] = useState('');
-  const [bio, setBio] = useState('');
-  const [profilePhotoUri, setProfilePhotoUri] = useState<string | undefined>();
-  const [experienceLevel, setExperienceLevel] = useState<'Curious' | 'Social' | 'Serious'>('Curious');
-  const [poursCount, setPoursCount] = useState(0);
-  const [connectionsCount, setConnectionsCount] = useState(0);
-  const [cheersCount, setCheersCount] = useState(0);
-  const [levelHint, setLevelHint] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [badges, setBadges] = useState<Badge[]>([]);
-  const [tasteSummary, setTasteSummary] = useState<TasteSummary | null>(null);
+  const scope = user?.id ?? null;
+  const profileSection = useLoadSection<User>(scope);
+  const photoSection = useLoadSection<string | undefined>(scope);
+  const levelSection = useLoadSection<string | null>(scope);
+  const badgeSection = useLoadSection<Badge[]>(scope);
+  const tasteSection = useLoadSection<TasteSummary>(scope);
+  const profile = profileSection.data;
+  const name = profile?.name ?? '';
+  const bio = profile?.bio ?? '';
+  const experienceLevel = profile?.experienceLevel ?? 'Curious';
+  const poursCount = profile?.poursCount ?? 0;
+  const connectionsCount = profile?.connectionsCount ?? 0;
+  const cheersCount = profile?.cheersCount ?? 0;
+  const profilePhotoUri = photoSection.data;
+  const levelHint = levelSection.data;
+  const badges = badgeSection.data ?? [];
+  const tasteSummary = tasteSection.data;
   const [tapCount, setTapCount] = useState(0);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
   const tapTimer = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (!isDistillery) {
-      loadProfile();
-    }
-  }, [isDistillery]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!isDistillery) {
-        loadProfile();
-      }
-    }, [isDistillery])
-  );
-
-  const loadProfile = async () => {
-    try {
-      setLoading(true);
-      
-      // Load profile data
-      const profile = await apiService.getProfile();
-      setName(profile?.name ?? '');
-      setBio(profile?.bio ?? '');
-      setExperienceLevel((profile?.experienceLevel as any) ?? 'Curious');
-      setPoursCount(profile?.poursCount ?? 0);
-      setConnectionsCount(profile?.connectionsCount ?? 0);
-      setCheersCount(profile?.cheersCount ?? 0);
-      
-      if (profile?.profilePhoto) {
-        const url = await uploadService.getImageUrl(profile.profilePhoto, 'view');
-        setProfilePhotoUri(url);
-      } else {
-        setProfilePhotoUri(undefined);
-      }
-
-      // What the user needs for the next experience level
-      try {
-        const breakdown = await apiService.getExperienceBreakdown();
-        if (breakdown?.nextLevel && (breakdown?.needs?.length ?? 0) > 0) {
-          setLevelHint(`${breakdown.needs.join(', ')} to reach ${breakdown.nextLevel}`);
-        } else {
-          setLevelHint(null);
-        }
-      } catch {
-        setLevelHint(null); // Endpoint unavailable: just omit the hint
-      }
-
-      // Load badges and taste summary
-      const [badgesData, tasteSummaryData] = await Promise.all([
-        apiService.getBadges(),
-        apiService.getTasteSummary(),
-      ]);
-      
-      console.log('[Profile] Badges loaded:', badgesData?.length ?? 0);
-      console.log('[Profile] Taste summary loaded:', JSON.stringify(tasteSummaryData));
-      
-      setBadges(badgesData ?? []);
-      setTasteSummary(tasteSummaryData);
-    } catch (error) {
-      console.error('Failed to load profile:', error);
-      Alert.alert('Error', 'Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
+  const loadPhoto = (request?: Promise<User>) => photoSection.load(async () => {
+    const currentProfile = await (request ?? apiService.getProfile());
+    return currentProfile.profilePhoto ? uploadService.getImageUrl(currentProfile.profilePhoto, 'view') : undefined;
+  });
+  const loadLevel = () => levelSection.load(async () => {
+    const breakdown = await apiService.getExperienceBreakdown();
+    return breakdown?.nextLevel && breakdown.needs?.length ? `${breakdown.needs.join(', ')} to reach ${breakdown.nextLevel}` : null;
+  });
+  const loadBadges = () => badgeSection.load(() => apiService.getBadges());
+  const loadTaste = () => tasteSection.load(() => apiService.getTasteSummary());
+  const loadProfile = () => {
+    if (!scope) return profileSection.load(() => apiService.getProfile());
+    const request = apiService.getProfile();
+    return Promise.all([
+      profileSection.load(() => request), loadPhoto(request), loadLevel(), loadBadges(), loadTaste(),
+    ]);
   };
+  useFocusEffect(React.useCallback(() => {
+    if (!isDistillery) loadProfile();
+  }, [isDistillery, scope]));
 
   const handleVersionTap = () => {
     const newTapCount = tapCount + 1;
@@ -227,11 +191,12 @@ export default function ProfileScreen() {
 
 
 
-  if (loading) {
+  if (profileSection.data === undefined) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text>Loading...</Text>
+          <LoadNotice name="your profile" section={{ ...profileSection, retry: loadProfile }} />
+          <Button onPress={() => router.back()}>Go Back</Button>
         </View>
       </SafeAreaView>
     );
@@ -254,6 +219,8 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <LoadNotice name="your profile" section={{ ...profileSection, retry: loadProfile }} />
+        <LoadNotice name="your profile photo" section={{ ...photoSection, retry: () => loadPhoto() }} />
         {/* Profile Photo Section */}
         <View style={styles.profilePhotoSection}>
           {profilePhotoUri ? (
@@ -311,11 +278,14 @@ export default function ProfileScreen() {
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Experience Level</Text>
             <Text style={styles.infoValue}>{experienceLevel}</Text>
+            <LoadNotice name="your level progress" section={{ ...levelSection, retry: loadLevel }} />
             {levelHint && <Text style={styles.levelHint}>{levelHint}</Text>}
           </View>
         </View>
 
         {/* Gamification Section */}
+        <LoadNotice name="your taste summary" section={{ ...tasteSection, retry: loadTaste }} />
+        <LoadNotice name="your badges" section={{ ...badgeSection, retry: loadBadges }} />
         {tasteSummary && (
           <TasteSummaryCard tasteSummary={tasteSummary} />
         )}

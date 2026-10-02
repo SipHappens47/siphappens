@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Alert, Platform, Pressable } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, Alert, Platform, Pressable, Linking, AppState } from 'react-native';
 import { Text, Button, ActivityIndicator, IconButton } from 'react-native-paper';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -13,39 +13,17 @@ import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
 export default function CameraScreen() {
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [capturing, setCapturing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
-
-  if (!permission) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.permissionContainer}>
-          <Text style={styles.permissionText}>Camera access is required to scan bottles</Text>
-          <Button mode="contained" onPress={requestPermission} style={styles.button}>
-            Grant Permission
-          </Button>
-          <Button
-            mode="text"
-            onPress={() => router.push('/camera/manual-search')}
-            style={styles.linkButton}
-          >
-            Search Manually Instead
-          </Button>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') getPermission().catch(() => Alert.alert('Permission unavailable', 'Please try opening the camera again.'));
+    });
+    return () => subscription.remove();
+  }, [getPermission]);
 
   // Resize, recognize and route to spirit-details — shared by camera capture
   // and gallery selection.
@@ -139,6 +117,36 @@ export default function CameraScreen() {
       Alert.alert('Error', 'Failed to load photo. Please try again.');
     }
   };
+
+  if (!permission) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.permissionContainer}>
+          <Text style={styles.permissionText}>{permission.canAskAgain ? 'Camera access is required to scan bottles' : 'Camera access is disabled. Open Settings to allow it, or choose a photo from Gallery.'}</Text>
+          <Button mode="contained" onPress={permission.canAskAgain ? requestPermission : () => Linking.openSettings().catch(() => Alert.alert('Settings unavailable', 'Please open your device settings to allow camera access.'))} style={styles.button}>
+            {permission.canAskAgain ? 'Grant Permission' : 'Open Settings'}
+          </Button>
+          <Button mode="outlined" onPress={pickFromGallery} disabled={analyzing} loading={analyzing} style={styles.button}>Gallery</Button>
+          <Button mode="text" onPress={() => router.back()} style={styles.linkButton}>Go Back</Button>
+          <Button
+            mode="text"
+            onPress={() => router.push('/camera/manual-search')}
+            style={styles.linkButton}
+          >
+            Search Manually Instead
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <View style={styles.container}>
