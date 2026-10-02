@@ -6,6 +6,7 @@ import { ResolveReportDto } from './dto/resolve-report.dto';
 import * as s3 from '../lib/s3';
 import { canDeleteStorageObject } from '../upload/storage-ownership';
 import { getHiddenUserIds } from './blocking';
+import { BANNED_EMAIL_TARGET, recordBannedEmail } from './banned-emails';
 
 @Injectable()
 export class ModerationService {
@@ -87,7 +88,8 @@ export class ModerationService {
   async listReports(adminUserId: string, status: string = 'Open') {
     await this.adminService.checkAdminAccess(adminUserId);
     return this.prisma.report.findMany({
-      where: { status: status as any },
+      // Ban records are bookkeeping, not reports to review.
+      where: { status: status as any, targettype: { not: BANNED_EMAIL_TARGET } },
       orderBy: { createdat: 'desc' },
       include: { reporter: { select: { id: true, name: true, email: true } } },
     });
@@ -114,7 +116,12 @@ export class ModerationService {
         userIdToBan = pour?.userid ?? null;
       }
       if (userIdToBan) {
-        await this.deleteUserAndStorage(userIdToBan);
+        const banned = await this.prisma.user.findUnique({ where: { id: userIdToBan }, select: { email: true } });
+        if (banned) {
+          // Remember the email before the account is deleted so it can't sign up again.
+          await recordBannedEmail(this.prisma, adminUserId, banned.email, reportId);
+          await this.deleteUserAndStorage(userIdToBan);
+        }
       }
     }
 

@@ -21,6 +21,7 @@ function fixture(existing = null) {
       create: async ({ data }) => { calls.create++; return { id: 'new-user', tokenversion: 0, ...data }; },
     },
     connection: { create: async () => ({}) },
+    report: { findFirst: async () => null }, // no banned emails
   };
   return { service: new AuthService(prisma, { sign: () => 'token' }), calls };
 }

@@ -182,7 +182,9 @@ test("admin ban keeps another user's object referenced by a forged record", asyn
     report: {
       findUnique: async () => ({ id: 'r', targettype: 'user', targetid: BOB }),
       update: async () => ({}),
+      create: async () => ({}), // batch 3: the ban records a hash of the email
     },
+    user: { findUnique: async () => ({ email: 'bob@example.invalid' }), delete: async () => ({}) },
   });
   const admin = { checkAdminAccess: async () => {} };
   await new ModerationService(db.prisma, admin).resolveReport('admin', 'r', { action: 'ban_user' });

@@ -7,6 +7,10 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { sendEmail } from '../lib/email';
 import { isReservedAdminSignup } from '../admin/admin.service';
+import { isBannedEmail } from '../moderation/banned-emails';
+
+const DISTILLERY_ALREADY_CLAIMED =
+  'This distillery has already been claimed. Contact SipHappens support if you manage it.';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +28,12 @@ export class AuthService {
 
     if (isReservedAdminSignup(email)) {
       throw new BadRequestException('This email address is reserved');
+    }
+
+    if (await isBannedEmail(this.prisma, email)) {
+      throw new BadRequestException(
+        "This email address can't be used to create an account. Contact SipHappens support if you think this is a mistake.",
+      );
     }
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
@@ -45,9 +55,7 @@ export class AuthService {
         },
       });
       if (existingDistillery?.owneruserid) {
-        throw new BadRequestException(
-          'This distillery has already been claimed. Contact SipHappens support if you manage it.',
-        );
+        throw new BadRequestException(DISTILLERY_ALREADY_CLAIMED);
       }
     }
 
@@ -85,9 +93,10 @@ export class AuthService {
     let distillery: any = null;
     if (isDistilleryAccount && distilleryData) {
       if (existingDistillery) {
-        // Link to an existing, unowned (seeded) distillery
-        distillery = await this.prisma.distillery.update({
-          where: { id: existingDistillery.id },
+        // Link to an existing, unowned (seeded) distillery. The claim is one
+        // conditional UPDATE, so of two parallel signups only one can win.
+        const claimed = await this.prisma.distillery.updateMany({
+          where: { id: existingDistillery.id, owneruserid: null },
           data: {
             owneruserid: user.id,
             verified: false, // Pending verification by admin
@@ -101,6 +110,12 @@ export class AuthService {
             ...(distilleryData.spiritTypes && { spirittypes: distilleryData.spiritTypes.trim() }),
           },
         });
+        if (claimed.count !== 1) {
+          // Someone else claimed it since the check above: undo this signup.
+          await this.prisma.user.delete({ where: { id: user.id } });
+          throw new BadRequestException(DISTILLERY_ALREADY_CLAIMED);
+        }
+        distillery = await this.prisma.distillery.findUnique({ where: { id: existingDistillery.id } });
       } else {
         // Create new distillery - pending verification
         distillery = await this.prisma.distillery.create({

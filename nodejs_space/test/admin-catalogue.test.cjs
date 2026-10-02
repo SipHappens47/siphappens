@@ -108,9 +108,17 @@ function signupFixture(existingDistillery) {
       create: async ({ data }) => { calls.userCreate++; return { id: 'new-user', tokenversion: 0, ...data }; },
     },
     connection: { create: async () => ({}) },
+    report: { findFirst: async () => null }, // no banned emails
     distillery: {
       findFirst: async () => existingDistillery,
       update: async ({ data }) => { calls.distilleryUpdate++; return { ...existingDistillery, ...data }; },
+      updateMany: async ({ where, data }) => {
+        calls.distilleryUpdate++;
+        if (existingDistillery.owneruserid !== where.owneruserid) return { count: 0 };
+        Object.assign(existingDistillery, data);
+        return { count: 1 };
+      },
+      findUnique: async () => existingDistillery,
       create: async ({ data }) => ({ id: 'created', ...data }),
     },
   };
