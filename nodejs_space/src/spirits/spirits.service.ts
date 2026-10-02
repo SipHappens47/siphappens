@@ -4,6 +4,7 @@ import { RecognizeBottleDto } from './dto/recognize-bottle.dto';
 import { CreateSpiritDto } from './dto/create-spirit.dto';
 import { UpdateSpiritDto } from './dto/update-spirit.dto';
 import { CreateDistilleryDto } from './dto/create-distillery.dto';
+import { getHiddenUserIds } from '../moderation/blocking';
 
 @Injectable()
 export class SpiritsService {
@@ -265,9 +266,10 @@ export class SpiritsService {
         },
         select: { initiatorid: true, receiverid: true },
       });
-      const friendIds = connections.map((c) =>
-        c.initiatorid === requestingUserId ? c.receiverid : c.initiatorid,
-      );
+      const hiddenUserIds = new Set(await getHiddenUserIds(this.prisma, requestingUserId));
+      const friendIds = connections
+        .map((c) => (c.initiatorid === requestingUserId ? c.receiverid : c.initiatorid))
+        .filter((id) => !hiddenUserIds.has(id));
       if (friendIds.length > 0) {
         const friendPours = await this.prisma.pour.findMany({
           where: { spiritid: id, userid: { in: friendIds } },

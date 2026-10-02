@@ -4,6 +4,7 @@ import { CreatePourDto } from './dto/create-pour.dto';
 import { UpdatePourDto } from './dto/update-pour.dto';
 import { BadgesService } from '../badges/badges.service';
 import { ProfileService } from '../profile/profile.service';
+import { assertNotBlocked } from '../moderation/blocking';
 
 @Injectable()
 export class PoursService {
@@ -169,6 +170,9 @@ export class PoursService {
       throw new NotFoundException('Pour not found');
     }
 
+    // Blocked either way: the pour does not exist for this viewer
+    await assertNotBlocked(this.prisma, userId, pour.userid, 'Pour not found');
+
     // Allow access if user is the owner OR the pour is shared
     if (pour.userid !== userId && !pour.isshared) {
       throw new ForbiddenException('Access denied');
@@ -259,7 +263,10 @@ export class PoursService {
     return { message: 'Pour deleted successfully' };
   }
 
-  async getUserPublicPours(userId: string) {
+  async getUserPublicPours(userId: string, viewerId?: string) {
+    if (viewerId) {
+      await assertNotBlocked(this.prisma, viewerId, userId);
+    }
     const pours = await this.prisma.pour.findMany({
       where: {
         userid: userId,

@@ -26,6 +26,9 @@ function loadService(relativePath, className) {
       if (name === '@nestjs/common') {
         return { Injectable: () => (value) => value, ForbiddenException, NotFoundException };
       }
+      if (name === '../moderation/blocking') {
+        return require('./support/load-ts.cjs').loadTs('moderation/blocking');
+      }
       throw new Error(`Unexpected import in isolated regression: ${name}`);
     },
   }, { filename });
@@ -135,6 +138,7 @@ function searchFixture() {
     distillery: { findMany: async () => [] },
     flavortag: { findMany: async () => [] },
     pour: { findMany: async () => [] },
+    block: { findMany: async () => [] },
   };
   return { service: new SearchService(prisma), query: () => userQuery };
 }

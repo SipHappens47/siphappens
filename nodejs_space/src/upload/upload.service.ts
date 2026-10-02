@@ -8,6 +8,7 @@ import {
   isPublicStoragePath,
   isTrustedFileRecord,
 } from './storage-ownership';
+import { isBlockedBetween } from '../moderation/blocking';
 import { PresignedUploadDto } from './dto/presigned-upload.dto';
 import { CompleteUploadDto } from './dto/complete-upload.dto';
 import { InitiateMultipartDto } from './dto/initiate-multipart.dto';
@@ -150,6 +151,12 @@ export class UploadService {
     // A record registered against someone else's object grants nothing.
     if (!(await isTrustedFileRecord(this.prisma, file))) {
       throw new ForbiddenException('Access denied');
+    }
+
+    // SH-C02: pour photos and private files of a blocked user do not exist for the viewer.
+    const blockable = (file.pours?.length ?? 0) > 0 || !file.ispublic;
+    if (file.userid !== userId && blockable && (await isBlockedBetween(this.prisma, userId, file.userid))) {
+      throw new NotFoundException('File not found');
     }
 
     // Allow access if:

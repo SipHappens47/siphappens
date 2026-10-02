@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { getHiddenUserIds } from '../moderation/blocking';
 
 @Injectable()
 export class DistilleriesService {
@@ -229,10 +230,12 @@ export class DistilleriesService {
       throw new NotFoundException('Distillery not found');
     }
 
+    const hiddenUserIds = await getHiddenUserIds(this.prisma, userId);
     const pours = await this.prisma.pour.findMany({
       where: {
         distilleryid: distilleryId,
         isshared: true,
+        userid: { notIn: hiddenUserIds },
       },
       include: {
         user: {

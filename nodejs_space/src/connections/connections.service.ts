@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { PrismaService } from '../prisma/prisma.service';
 import { ProfileService } from '../profile/profile.service';
 import { sendPushNotification } from '../lib/push-notifications';
+import { assertNotBlocked, getHiddenUserIds, isBlockedBetween } from '../moderation/blocking';
 
 @Injectable()
 export class ConnectionsService {
@@ -16,10 +17,12 @@ export class ConnectionsService {
       return [];
     }
 
+    const hiddenUserIds = await getHiddenUserIds(this.prisma, currentUserId);
     const users = await this.prisma.user.findMany({
       where: {
         AND: [
           { id: { not: currentUserId } }, // Exclude current user
+          { id: { notIn: hiddenUserIds } }, // Exclude anyone blocked either way
           { isofficial: false }, // Exclude official account from connection search
           { owneddistillery: { none: { verified: true } } }, // Verified distillery owners appear as their distillery, not as sippers
           {
@@ -93,6 +96,8 @@ export class ConnectionsService {
     if (receiver.id === initiatorId) {
       throw new BadRequestException('Cannot connect with yourself');
     }
+
+    await assertNotBlocked(this.prisma, initiatorId, receiver.id);
 
     // Check if connection already exists (in either direction)
     const existingConnection = await this.prisma.connection.findFirst({
@@ -201,6 +206,8 @@ export class ConnectionsService {
       throw new BadRequestException('Cannot connect with yourself');
     }
 
+    await assertNotBlocked(this.prisma, initiatorId, receiver.id, 'User not found with that name or email');
+
     // Check if connection already exists (in either direction)
     const existingConnection = await this.prisma.connection.findFirst({
       where: {
@@ -236,6 +243,8 @@ export class ConnectionsService {
     if (connection.receiverid !== userId) {
       throw new ForbiddenException('You can only accept requests sent to you');
     }
+
+    await assertNotBlocked(this.prisma, userId, connection.initiatorid, 'Connection request not found');
 
     if (connection.status === 'Accepted') {
       throw new BadRequestException('Connection already accepted');
@@ -298,10 +307,12 @@ export class ConnectionsService {
 
   // Get pending connection requests (received by user)
   async getPendingRequests(userId: string) {
+    const hiddenUserIds = await getHiddenUserIds(this.prisma, userId);
     const requests = await this.prisma.connection.findMany({
       where: {
         receiverid: userId,
         status: 'Pending',
+        initiatorid: { notIn: hiddenUserIds },
       },
       include: {
         initiator: {
@@ -332,10 +343,12 @@ export class ConnectionsService {
   // Get pending connection requests this user has SENT (so their UI can show
   // "Request Pending" and prevent sending a duplicate).
   async getSentRequests(userId: string) {
+    const hiddenUserIds = await getHiddenUserIds(this.prisma, userId);
     const requests = await this.prisma.connection.findMany({
       where: {
         initiatorid: userId,
         status: 'Pending',
+        receiverid: { notIn: hiddenUserIds },
       },
       include: {
         initiator: {
@@ -388,8 +401,12 @@ export class ConnectionsService {
       },
     });
 
-    // Return the other user in each connection
-    return connections.map((conn) => {
+    // Return the other user in each connection, minus anyone blocked either way
+    // (covers blocks made before a block removed the connection)
+    const hidden = new Set(await getHiddenUserIds(this.prisma, userId));
+    return connections
+      .filter((conn) => !hidden.has(conn.initiatorid === userId ? conn.receiverid : conn.initiatorid))
+      .map((conn) => {
       const otherUser = conn.initiatorid === userId ? conn.receiver : conn.initiator;
       return {
         connectionId: conn.id,
@@ -418,7 +435,7 @@ export class ConnectionsService {
       },
     });
 
-    return !!connection;
+    return !!connection && !(await isBlockedBetween(this.prisma, userId1, userId2));
   }
 
   // Mute a connection (hide their posts from your feed)

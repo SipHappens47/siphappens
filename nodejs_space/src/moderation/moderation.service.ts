@@ -5,6 +5,7 @@ import { ReportDto } from './dto/report.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
 import * as s3 from '../lib/s3';
 import { canDeleteStorageObject } from '../upload/storage-ownership';
+import { getHiddenUserIds } from './blocking';
 
 @Injectable()
 export class ModerationService {
@@ -38,6 +39,15 @@ export class ModerationService {
       update: {},
       create: { blockerid: blockerId, blockedid: blockedId },
     });
+    // SH-C02: a block ends any connection or pending request between the pair.
+    await this.prisma.connection.deleteMany({
+      where: {
+        OR: [
+          { initiatorid: blockerId, receiverid: blockedId },
+          { initiatorid: blockedId, receiverid: blockerId },
+        ],
+      },
+    });
     return { success: true };
   }
 
@@ -56,18 +66,21 @@ export class ModerationService {
     return blocks.map((b) => b.blockedid);
   }
 
+  // Users this user blocked, with just enough to show an unblock list
+  // (the blocked user's profile itself is no longer reachable).
+  async getMyBlockedUsers(userId: string) {
+    const blocks = await this.prisma.block.findMany({
+      where: { blockerid: userId },
+      select: { createdat: true, blocked: { select: { id: true, name: true } } },
+      orderBy: { createdat: 'desc' },
+    });
+    return blocks.map((b) => ({ id: b.blocked.id, name: b.blocked.name, blockedAt: b.createdat }));
+  }
+
   // Every user id the given user should not see content from: people they
   // blocked, plus people who blocked them. Used to filter feeds and search.
   async getHiddenUserIds(userId: string): Promise<string[]> {
-    const blocks = await this.prisma.block.findMany({
-      where: { OR: [{ blockerid: userId }, { blockedid: userId }] },
-      select: { blockerid: true, blockedid: true },
-    });
-    const ids = new Set<string>();
-    for (const b of blocks) {
-      ids.add(b.blockerid === userId ? b.blockedid : b.blockerid);
-    }
-    return [...ids];
+    return getHiddenUserIds(this.prisma, userId);
   }
 
   // ---- Admin review ----------------------------------------------------

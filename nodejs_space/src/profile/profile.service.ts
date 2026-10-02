@@ -4,6 +4,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePhotoDto } from './dto/update-photo.dto';
 import * as s3 from '../lib/s3';
 import { canDeleteStorageObject } from '../upload/storage-ownership';
+import { assertNotBlocked } from '../moderation/blocking';
 
 @Injectable()
 export class ProfileService {
@@ -264,8 +265,12 @@ export class ProfileService {
     };
   }
 
-  async getPublicProfile(userId: string) {
+  async getPublicProfile(userId: string, viewerId?: string) {
     try {
+      if (viewerId) {
+        await assertNotBlocked(this.prisma, viewerId, userId);
+      }
+
       console.log('[ProfileService] Getting public profile for userId:', userId);
       
       const user = await this.prisma.user.findUnique({
