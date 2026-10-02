@@ -5,7 +5,7 @@
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "abacusai1772133303",
+    "scheme": "siphappens",
     "userInterfaceStyle": "light",
     "description": "Discover the World of Spirits. Track what you drink. Discover what you'll love. Build your own spirits universe.",
     "splash": {
@@ -18,13 +18,10 @@
       "infoPlist": {
         "NSCameraUsageDescription": "SipHappens needs camera access to scan bottle labels and identify spirits.",
         "NSPhotoLibraryUsageDescription": "SipHappens needs photo library access to select bottle images for your pour entries.",
-        "NSLocationWhenInUseUsageDescription": "SipHappens needs your location to show nearby distilleries on the map."
+        "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.abacusai.siphappens.t1772133303",
-      "buildNumber": "2",
-      "config": {
-        "googleMapsApiKey": "AIzaSyDEXAMPLE_KEY_REPLACE_WITH_YOUR_KEY"
-      }
+      "bundleIdentifier": "com.siphappens.app",
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
@@ -35,29 +32,25 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
-      "package": "com.abacusai.siphappens.t1772133303",
+      "package": "com.siphappens.app",
       "versionCode": 2,
       "userInterfaceStyle": "dark",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDEXAMPLE_KEY_REPLACE_WITH_YOUR_KEY"
-        }
-      },
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
             {
-              "scheme": "abacusai1772133303",
+              "scheme": "siphappens",
               "host": "*"
             }
           ],
@@ -73,13 +66,16 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SipHappens to access your camera to scan bottle labels."
+          "cameraPermission": "Allow SipHappens to access your camera to scan bottle labels.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow SipHappens to access your photos to select bottle images."
+          "photosPermission": "Allow SipHappens to access your photos to select bottle images.",
+          "microphonePermission": false
         }
       ],
       [
