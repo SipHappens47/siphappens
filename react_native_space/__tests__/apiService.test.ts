@@ -1,18 +1,25 @@
-import { apiService } from '../src/services/api';
 import axios from 'axios';
+import { apiService } from '../src/services/api';
 
-jest.mock('axios');
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-}));
+// ApiService builds its own axios instance, so mock axios.create with a fake
+// client that records the interceptors it registers.
+jest.mock('axios', () => {
+  const client = {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+    interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
+  };
+  return { __esModule: true, default: { create: jest.fn(() => client) } };
+});
 
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+const client = (axios.create as jest.Mock).mock.results[0].value;
 
 describe('apiService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    client.get.mockReset();
+    client.post.mockReset();
   });
 
   describe('getPours', () => {
@@ -26,15 +33,15 @@ describe('apiService', () => {
         },
       ];
 
-      mockedAxios.get = jest.fn().mockResolvedValue({ data: mockPours });
+      client.get.mockResolvedValue({ data: mockPours });
 
       const result = await apiService.getPours();
 
       expect(result).toEqual(mockPours);
     });
 
-    it('should return empty array on error', async () => {
-      mockedAxios.get = jest.fn().mockRejectedValue(new Error('Network error'));
+    it('should reject on error', async () => {
+      client.get.mockRejectedValue(new Error('Network error'));
 
       await expect(apiService.getPours()).rejects.toThrow('Network error');
     });
@@ -53,7 +60,7 @@ describe('apiService', () => {
         ...newPour,
       };
 
-      mockedAxios.post = jest.fn().mockResolvedValue({ data: mockResponse });
+      client.post.mockResolvedValue({ data: mockResponse });
 
       const result = await apiService.createPour(newPour);
 
