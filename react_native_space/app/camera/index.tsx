@@ -10,6 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiService } from '../../src/services/api';
 import { playPourSound } from '../../src/utils/sound';
 import { ensureAiScanConsent } from '../../src/utils/aiScanConsent';
+import { showScanError } from '../../src/utils/scanErrors';
 import { useAuth } from '../../src/context/AuthContext';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
@@ -68,7 +69,7 @@ export default function CameraScreen() {
       }
     } catch (error) {
       console.error('Image processing error:', error);
-      Alert.alert('Error', 'Failed to analyze bottle. Please try again.');
+      showScanError(error, () => router.push('/camera/manual-search'));
     } finally {
       setCapturing(false);
       setAnalyzing(false);
