@@ -1,7 +1,8 @@
-import { Controller, Post, UseGuards, Body, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Controller, Post, UseGuards, Body, UploadedFile, UseInterceptors, BadRequestException, Request } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SeedService } from './seed.service';
+import { AdminService } from '../admin/admin.service';
 import { Logger } from '@nestjs/common';
 
 @Controller('api/seed')
@@ -9,10 +10,15 @@ import { Logger } from '@nestjs/common';
 export class SeedController {
   private readonly logger = new Logger(SeedController.name);
 
-  constructor(private readonly seedService: SeedService) {}
+  constructor(
+    private readonly seedService: SeedService,
+    private readonly adminService: AdminService,
+  ) {}
 
+  // Every seed route writes or inspects the shared catalogue, so all are admin-only.
   @Post('auto-import')
-  async autoImport() {
+  async autoImport(@Request() req: any) {
+    await this.adminService.checkAdminAccess(req.user.userId);
     this.logger.log('Starting auto-import from Connecticut and Iowa datasets');
     
     try {
@@ -30,7 +36,8 @@ export class SeedController {
 
   @Post('upload-csv')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadCsv(@UploadedFile() file: any) {
+  async uploadCsv(@Request() req: any, @UploadedFile() file: any) {
+    await this.adminService.checkAdminAccess(req.user.userId);
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -51,13 +58,15 @@ export class SeedController {
   }
 
   @Post('get-stats')
-  async getStats() {
+  async getStats(@Request() req: any) {
+    await this.adminService.checkAdminAccess(req.user.userId);
     const stats = await this.seedService.getDatabaseStats();
     return stats;
   }
 
   @Post('seed-test-distilleries')
-  async seedTestDistilleries() {
+  async seedTestDistilleries(@Request() req: any) {
+    await this.adminService.checkAdminAccess(req.user.userId);
     this.logger.log('Starting test distillery seeding');
     
     try {

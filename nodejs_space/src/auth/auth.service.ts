@@ -25,6 +25,26 @@ export class AuthService {
       throw new BadRequestException('Email already in use');
     }
 
+    // A distillery that already has an owner cannot be re-claimed through
+    // signup: that would displace the owner and reset its verification.
+    // Checked before the account is created so a refused claim leaves nothing behind.
+    let existingDistillery: any = null;
+    if (isDistilleryAccount && distilleryData) {
+      existingDistillery = await this.prisma.distillery.findFirst({
+        where: {
+          name: {
+            equals: distilleryData.distilleryName,
+            mode: 'insensitive',
+          },
+        },
+      });
+      if (existingDistillery?.owneruserid) {
+        throw new BadRequestException(
+          'This distillery has already been claimed. Contact SipHappens support if you manage it.',
+        );
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await this.prisma.user.create({
@@ -58,18 +78,8 @@ export class AuthService {
     // Handle distillery account signup
     let distillery: any = null;
     if (isDistilleryAccount && distilleryData) {
-      // Check for existing distillery with exact same name (case-insensitive)
-      const existingDistillery = await this.prisma.distillery.findFirst({
-        where: {
-          name: {
-            equals: distilleryData.distilleryName,
-            mode: 'insensitive',
-          },
-        },
-      });
-
       if (existingDistillery) {
-        // Link to existing distillery
+        // Link to an existing, unowned (seeded) distillery
         distillery = await this.prisma.distillery.update({
           where: { id: existingDistillery.id },
           data: {
