@@ -60,7 +60,6 @@ export class SearchService {
       select: {
         id: true,
         name: true,
-        email: true,
         profilephoto: true,
         experiencelevel: true,
         isofficial: true,
@@ -71,7 +70,6 @@ export class SearchService {
     return users.map((user) => ({
       id: user.id,
       name: user.name,
-      email: user.email,
       profilePhoto: user.profilephoto,
       experienceLevel: user.experiencelevel,
       isOfficial: user.isofficial ?? false,

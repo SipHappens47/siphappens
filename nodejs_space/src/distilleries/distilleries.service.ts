@@ -434,6 +434,8 @@ export class DistilleriesService {
       tastingNotes?: string;
     },
   ) {
+    await this.checkOwnership(distilleryId, userId);
+
     // Verify distillery exists and is premium
     const distillery = await this.prisma.distillery.findUnique({
       where: { id: distilleryId },
@@ -490,6 +492,8 @@ export class DistilleriesService {
 
   // GET /api/distilleries/:id/analytics - Private analytics (premium only)
   async getAnalytics(distilleryId: string, userId: string) {
+    await this.checkOwnership(distilleryId, userId);
+
     // Verify distillery exists and is premium
     const distillery = await this.prisma.distillery.findUnique({
       where: { id: distilleryId },
