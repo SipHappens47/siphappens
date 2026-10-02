@@ -125,11 +125,12 @@ export default function CreatePourScreen() {
     try {
       let imageFileId = undefined;
       if (imageUri) {
-        // Upload as public if the pour is being shared, private otherwise
+        // Pour photos are always stored privately; the server serves them
+        // through short-lived signed URLs while the pour is shared (SH-C04).
         imageFileId = await uploadService.uploadImage(
           imageUri,
           `pour-${Date.now()}.jpg`,
-          isShared // Public if shared, private if not
+          false
         );
       }
 

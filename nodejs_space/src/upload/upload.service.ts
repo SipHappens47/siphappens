@@ -35,7 +35,11 @@ export class UploadService {
 
     try {
       const { uploadUrl, cloud_storage_path } = await s3.generatePresignedUploadUrl(
-        buildUserStoragePath(userId, fileName, isPublic ? 'public' : 'private'),
+        buildUserStoragePath(
+          userId,
+          fileName,
+          isPublic ? 'public' : s3.privateBucketConfigured() ? 'secure' : 'private',
+        ),
         contentType,
       );
 
@@ -159,18 +163,23 @@ export class UploadService {
       throw new NotFoundException('File not found');
     }
 
-    // Allow access if:
-    // 1. File is public, OR
-    // 2. User is the file owner, OR
-    // 3. File is a pour image for a shared pour
-    const isSharedPourImage = file.pours?.some((pour: any) => pour.isshared === true);
-    const hasAccess = file.ispublic || file.userid === userId || isSharedPourImage;
+    // SH-C04: a pour photo follows its pour's share state, not the file's
+    // upload-time public flag. Access is the owner, or anyone while one of the
+    // owner's own pours using it is shared. Other files: owner, or public.
+    const isPourPhoto = (file.pours?.length ?? 0) > 0;
+    const hasAccess =
+      file.userid === userId ||
+      (isPourPhoto
+        ? file.pours.some((pour: any) => pour.userid === file.userid && pour.isshared === true)
+        : file.ispublic);
 
     if (!hasAccess) {
       throw new ForbiddenException('Access denied');
     }
 
-    const url = await s3.getFileUrl(file.cloudstoragepath, file.ispublic, mode);
+    // Pour photos are only ever handed out as short-lived signed URLs, so
+    // unsharing a pour stops new access through the app.
+    const url = await s3.getFileUrl(file.cloudstoragepath, file.ispublic && !isPourPhoto, mode);
 
     return {
       url,
