@@ -185,6 +185,8 @@ export default function CameraScreen() {
 
                   <Pressable
                     style={styles.captureButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Take photo"
                     onPress={takePicture}
                     disabled={capturing}
                   >
