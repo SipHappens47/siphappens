@@ -137,7 +137,7 @@ export default function SignupScreen() {
     
     if (!ageVerified) {
       console.log('[Signup] Age not verified');
-      Alert.alert('Age Verification', 'Please confirm you are of legal drinking age.');
+      Alert.alert('Age Verification', 'Please confirm you are 18 or older.');
       return;
     }
 
@@ -416,7 +416,7 @@ export default function SignupScreen() {
                   color={Colors.accent}
                 />
                 <Text style={[styles.checkboxLabel, { fontSize: isSmallScreen ? 12 : 13 }]}>
-                  I confirm I am of legal drinking age.
+                  I confirm I am 18 or older.
                 </Text>
               </View>
 

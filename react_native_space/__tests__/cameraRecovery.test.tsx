@@ -18,8 +18,11 @@ jest.mock('expo-image-picker', () => ({ requestMediaLibraryPermissionsAsync: () 
 jest.mock('expo-image-manipulator', () => ({ manipulateAsync: jest.fn().mockResolvedValue({ base64: 'synthetic', uri: 'local:resized' }), SaveFormat: { JPEG: 'jpeg' } }));
 jest.mock('../src/services/api', () => ({ apiService: { recognizeSpirit: (...args: any[]) => mockRecognize(...args) } }));
 jest.mock('../src/utils/sound', () => ({ playPourSound: jest.fn() }));
+jest.mock('../src/context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'alice' } }) }));
+const mockConsent = jest.fn();
+jest.mock('../src/utils/aiScanConsent', () => ({ ensureAiScanConsent: (...args: any[]) => mockConsent(...args) }));
 
-beforeEach(() => { jest.clearAllMocks(); jest.spyOn(AppState, 'addEventListener').mockImplementation(() => ({ remove: jest.fn() })); mockPermission = { granted: false, canAskAgain: true }; mockLibrary.mockResolvedValue({ status: 'granted', accessPrivileges: 'limited' }); mockPick.mockResolvedValue({ canceled: true }); });
+beforeEach(() => { jest.clearAllMocks(); jest.spyOn(AppState, 'addEventListener').mockImplementation(() => ({ remove: jest.fn() })); mockPermission = { granted: false, canAskAgain: true }; mockLibrary.mockResolvedValue({ status: 'granted', accessPrivileges: 'limited' }); mockPick.mockResolvedValue({ canceled: true }); mockConsent.mockResolvedValue(true); });
 
 describe('camera denial recovery using mocked native modules', () => {
   it('keeps Gallery, manual and back available after camera denial; cancelling creates no recognition call', async () => {
@@ -49,5 +52,10 @@ describe('camera denial recovery using mocked native modules', () => {
   it('does not launch the picker or recognition when library access is denied', async () => {
     mockLibrary.mockResolvedValue({ status: 'denied' }); const view = render(<CameraScreen />); fireEvent.press(view.getByText('Gallery'));
     await waitFor(() => expect(mockLibrary).toHaveBeenCalled()); expect(mockPick).not.toHaveBeenCalled(); expect(mockRecognize).not.toHaveBeenCalled();
+  });
+  it('asks for Gemini consent before the picker and sends nothing when the user chooses Not now', async () => {
+    mockConsent.mockResolvedValue(false); const view = render(<CameraScreen />); fireEvent.press(view.getByText('Gallery'));
+    await waitFor(() => expect(mockConsent).toHaveBeenCalledWith('alice'));
+    expect(mockLibrary).not.toHaveBeenCalled(); expect(mockPick).not.toHaveBeenCalled(); expect(mockRecognize).not.toHaveBeenCalled();
   });
 });

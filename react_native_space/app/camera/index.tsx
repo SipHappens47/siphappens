@@ -9,6 +9,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiService } from '../../src/services/api';
 import { playPourSound } from '../../src/utils/sound';
+import { ensureAiScanConsent } from '../../src/utils/aiScanConsent';
+import { useAuth } from '../../src/context/AuthContext';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
@@ -18,6 +20,7 @@ export default function CameraScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
+  const { user } = useAuth();
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') getPermission().catch(() => Alert.alert('Permission unavailable', 'Please try opening the camera again.'));
@@ -74,6 +77,7 @@ export default function CameraScreen() {
 
   const takePicture = async () => {
     if (!cameraRef?.current || capturing || analyzing) return;
+    if (!(await ensureAiScanConsent(user?.id))) return;
     try {
       setCapturing(true);
       playPourSound(); // pouring sound on scan
@@ -99,6 +103,7 @@ export default function CameraScreen() {
   // Pick an existing photo from the gallery and run it through recognition.
   const pickFromGallery = async () => {
     if (capturing || analyzing) return;
+    if (!(await ensureAiScanConsent(user?.id))) return;
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {

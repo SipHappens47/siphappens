@@ -4,7 +4,7 @@
 // these in sync when you update them, and host them at a public URL for the
 // store listings.
 
-export const LEGAL_EFFECTIVE_DATE = '7 July 2026';
+export const LEGAL_EFFECTIVE_DATE = '2 October 2026';
 
 export const PRIVACY_POLICY = `SipHappens — Privacy Policy
 Effective date: ${LEGAL_EFFECTIVE_DATE}
@@ -14,8 +14,8 @@ SipHappens is a social spirits-journaling app operated by AJ Web Design ("we",
 choices. Contact: aj.hartman47@gmail.com.
 
 1. Who can use SipHappens
-Only users of legal drinking age in their country or region. We do not knowingly
-collect information from anyone under the legal drinking age.
+Only users aged 18 or older. We do not knowingly collect information from anyone
+under 18.
 
 2. Information we collect
 - Account info: email, password (stored only as a secure hash), display name,
@@ -24,7 +24,7 @@ collect information from anyone under the legal drinking age.
 - Content you create: pours, notes, ratings, flavor tags, photos, shelf/radar
   lists, follows and cheers.
 - Bottle scan images, which are sent to our AI provider (Google Gemini) to
-  identify the spirit.
+  identify the spirit. See "Bottle scans and Google Gemini" below.
 - Technical data: push-notification token (if enabled) and error logs.
 
 3. How we use your information
@@ -40,6 +40,14 @@ and diagnose problems.
   (transactional email), Sentry (error reporting).
 - For legal reasons where required.
 We do not sell your personal information.
+
+Bottle scans and Google Gemini
+When you scan a bottle or choose a photo to identify, the photo is sent to
+Google's Gemini AI. SipHappens uses Gemini's free service, so Google may use the
+photos it receives to improve its products and services, and human reviewers may
+see them. The app asks for your agreement before your first scan, and you can
+search for bottles manually instead. Please avoid photos that show people or
+personal information.
 
 5. Data retention
 We keep your information while your account is active. Deleting your account
@@ -68,9 +76,9 @@ Effective date: ${LEGAL_EFFECTIVE_DATE}
 By creating an account or using SipHappens (operated by AJ Web Design) you agree
 to these Terms. If you do not agree, do not use the app.
 
-1. Eligibility — legal drinking age
-You must be of legal drinking age in your country or region. By using the app you
-confirm you meet this requirement. Please enjoy spirits responsibly.
+1. Eligibility — 18+
+You must be 18 or older to use SipHappens. By using the app you confirm you meet
+this requirement. Please enjoy spirits responsibly.
 
 2. Your account
 You are responsible for your credentials and activity under your account. Keep
@@ -84,7 +92,7 @@ other users). You are responsible for content you post.
 4. Acceptable use
 Do not post illegal, hateful, harassing, obscene, or objectionable content;
 impersonate others; promote irresponsible or unlawful alcohol use or target
-anyone under the legal drinking age; harass other users; or attempt to breach
+anyone under 18; harass other users; or attempt to breach
 security or misuse the service.
 
 5. Moderation, reporting, and enforcement
@@ -93,7 +101,8 @@ suspend or delete accounts that violate these Terms, and we aim to act on valid
 reports of objectionable content promptly.
 
 6. AI bottle identification
-AI identification may be inaccurate and is provided for informational and
+Bottle photos you scan are sent to Google's Gemini AI, as described in the Privacy
+Policy. AI identification may be inaccurate and is provided for informational and
 entertainment purposes only.
 
 7. Service availability

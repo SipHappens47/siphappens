@@ -9,6 +9,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiService } from '../../src/services/api';
 import { playPourSound } from '../../src/utils/sound';
+import { ensureAiScanConsent } from '../../src/utils/aiScanConsent';
+import { useAuth } from '../../src/context/AuthContext';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 
@@ -20,6 +22,7 @@ export default function ExploreCameraScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
+  const { user } = useAuth();
 
   if (!permission) {
     return (
@@ -94,6 +97,7 @@ export default function ExploreCameraScreen() {
 
   const takePicture = async () => {
     if (!cameraRef?.current || capturing || analyzing) return;
+    if (!(await ensureAiScanConsent(user?.id))) return;
     try {
       setCapturing(true);
       playPourSound(); // pouring sound on scan
@@ -114,6 +118,7 @@ export default function ExploreCameraScreen() {
 
   const pickFromGallery = async () => {
     if (capturing || analyzing) return;
+    if (!(await ensureAiScanConsent(user?.id))) return;
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
