@@ -22,6 +22,8 @@ const UnauthorizedException = httpError(401);
 const ForbiddenException = httpError(403);
 const NotFoundException = httpError(404);
 const ConflictException = httpError(409);
+const UnprocessableEntityException = httpError(422);
+const ServiceUnavailableException = httpError(503);
 
 class Logger {
   log() {}
@@ -40,8 +42,10 @@ const nestCommon = new Proxy({
   ForbiddenException,
   NotFoundException,
   ConflictException,
+  UnprocessableEntityException,
+  ServiceUnavailableException,
   Logger,
-  HttpStatus: { OK: 200, CREATED: 201, BAD_REQUEST: 400, FORBIDDEN: 403, NOT_FOUND: 404, TOO_MANY_REQUESTS: 429 },
+  HttpStatus: { OK: 200, CREATED: 201, BAD_REQUEST: 400, FORBIDDEN: 403, NOT_FOUND: 404, UNPROCESSABLE_ENTITY: 422, TOO_MANY_REQUESTS: 429, SERVICE_UNAVAILABLE: 503 },
 }, { get: (target, key) => (key in target ? target[key] : decoratorFactory) });
 
 const PASSTHROUGH = new Set(['crypto', 'node:crypto', 'bcryptjs']);
@@ -91,4 +95,6 @@ module.exports = {
   ForbiddenException,
   NotFoundException,
   ConflictException,
+  UnprocessableEntityException,
+  ServiceUnavailableException,
 };

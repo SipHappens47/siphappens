@@ -1,10 +1,25 @@
-import { Injectable, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  HttpException,
+  HttpStatus,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecognizeBottleDto } from './dto/recognize-bottle.dto';
 import { CreateSpiritDto } from './dto/create-spirit.dto';
 import { UpdateSpiritDto } from './dto/update-spirit.dto';
 import { CreateDistilleryDto } from './dto/create-distillery.dto';
 import { getHiddenUserIds } from '../moderation/blocking';
+
+// Shown to the user as-is by the app, so they must be plain and actionable.
+const RECOGNITION_UNAVAILABLE =
+  'Bottle recognition is temporarily unavailable. Please try again in a few minutes, or search for the bottle manually.';
+const IMAGE_UNREADABLE =
+  "We couldn't read that photo. Try a clearer photo of the bottle label, or search for the bottle manually.";
+const PROVIDER_TIMEOUT_MS = 25000;
 
 @Injectable()
 export class SpiritsService {
@@ -23,34 +38,42 @@ export class SpiritsService {
   }
 
   // Per-user daily cap on AI scans so a single account can't exhaust the shared
-  // Gemini quota for everyone. An attempt is counted up front (so parallel
-  // retries can't exceed the cap) and refunded if recognition fails.
+  // Gemini quota for everyone. An attempt is claimed up front with a single
+  // conditional UPDATE, so parallel requests can't exceed the cap, and is
+  // refunded only when the provider (not the image) is at fault.
   // Configurable via SCAN_DAILY_LIMIT (default 30). Returns the counted day.
   private async enforceScanQuota(userId: string): Promise<string> {
-    const limit = parseInt(process.env.SCAN_DAILY_LIMIT || '30', 10);
+    const parsed = parseInt(process.env.SCAN_DAILY_LIMIT || '30', 10);
+    const limit = Number.isFinite(parsed) ? parsed : 30;
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { dailyscancount: true, dailyscandate: true },
-    });
+    // Same day: increment only while under the limit.
+    const claimToday = () =>
+      this.prisma.user.updateMany({
+        where: { id: userId, dailyscandate: today, dailyscancount: { lt: limit } },
+        data: { dailyscancount: { increment: 1 } },
+      });
+
+    if ((await claimToday()).count === 1) return today;
+    if (limit >= 1) {
+      // First scan of a new day: start the count at 1. A parallel request that
+      // already started today makes this match nothing, so claim again.
+      const started = await this.prisma.user.updateMany({
+        where: { id: userId, OR: [{ dailyscandate: null }, { dailyscandate: { not: today } }] },
+        data: { dailyscandate: today, dailyscancount: 1 },
+      });
+      if (started.count === 1) return today;
+      if ((await claimToday()).count === 1) return today;
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
-    const usedToday = user.dailyscandate === today ? user.dailyscancount : 0;
-    if (usedToday >= limit) {
-      throw new HttpException(
-        `Daily scan limit of ${limit} reached. Try again tomorrow.`,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { dailyscancount: usedToday + 1, dailyscandate: today },
-    });
-    return today;
+    throw new HttpException(
+      `Daily scan limit of ${limit} reached. Try again tomorrow.`,
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
 
   // Give back a scan whose recognition failed. Only touches the day it was
@@ -66,8 +89,23 @@ export class SpiritsService {
     }
   }
 
+  // Gemini answers an unusable image with 400 INVALID_ARGUMENT. An invalid API
+  // key is also a 400 INVALID_ARGUMENT, but that is our fault, not the image's.
+  private isImageRejection(status: number, body: string): boolean {
+    if (status !== 400 || /API_KEY|API key/i.test(body)) return false;
+    try {
+      return JSON.parse(body)?.error?.status === 'INVALID_ARGUMENT';
+    } catch {
+      return false;
+    }
+  }
+
   async recognizeBottle(userId: string, dto: RecognizeBottleDto) {
     const scanDay = await this.enforceScanQuota(userId);
+    // Refund only while the failure is ours or the provider's (missing config,
+    // timeouts, network errors, 429, 5xx). Once the provider has answered for
+    // this image, or rejected the image itself, the scan stays counted.
+    let providerFault = true;
     try {
       const { image } = dto;
 
@@ -79,7 +117,7 @@ export class SpiritsService {
       const apiKey = process.env.GEMINI_API_KEY?.trim();
       if (!apiKey) {
         this.logger.error('GEMINI_API_KEY is not set');
-        throw new Error('Bottle recognition is not configured');
+        throw new ServiceUnavailableException(RECOGNITION_UNAVAILABLE);
       }
       // Each model has its own free-tier daily quota, so falling back to a
       // second model when the first is exhausted doubles the free scans.
@@ -106,19 +144,28 @@ export class SpiritsService {
       });
 
       // Per model: retry transient 503s briefly, then move to the next model.
-      // Quota errors (429) skip straight to the next model — they won't clear
-      // by waiting a few seconds.
+      // Quota errors (429) and timeouts skip straight to the next model — they
+      // won't clear by waiting a few seconds. Two timeouts stay under the
+      // app's 90-second request timeout.
       const attemptsPerModel = 2;
       let data: any = null;
       let lastError = '';
       outer: for (const model of models) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         for (let attempt = 1; attempt <= attemptsPerModel; attempt++) {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: reqBody,
-          });
+          let response: Response;
+          try {
+            response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: reqBody,
+              signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+            });
+          } catch (err: any) {
+            lastError = err?.message ?? String(err);
+            this.logger.warn(`Gemini ${model} unreachable or timed out (${err?.name}), trying next model`);
+            break; // next model
+          }
           if (response.ok) {
             data = await response.json();
             break outer;
@@ -133,6 +180,11 @@ export class SpiritsService {
             await new Promise((r) => setTimeout(r, attempt * 1500));
             continue;
           }
+          if (this.isImageRejection(response.status, lastError)) {
+            // The image itself was refused: no refund, and no second model.
+            providerFault = false;
+            throw new UnprocessableEntityException(IMAGE_UNREADABLE);
+          }
           this.logger.warn(`Gemini ${model} failed (${response.status}), trying next model`);
           break; // next model
         }
@@ -140,21 +192,29 @@ export class SpiritsService {
 
       if (!data) {
         this.logger.error('Gemini API error (all models):', lastError);
-        throw new Error('Failed to analyze bottle image');
+        throw new ServiceUnavailableException(RECOGNITION_UNAVAILABLE);
       }
 
+      // The provider answered for this image, so the scan is spent.
+      providerFault = false;
       const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
       if (!content) {
-        throw new Error('No response from AI');
+        // Usually the image was blocked or unreadable.
+        throw new UnprocessableEntityException(IMAGE_UNREADABLE);
       }
-
-      const result = JSON.parse(content);
-      return result;
+      try {
+        return JSON.parse(content);
+      } catch {
+        throw new UnprocessableEntityException(IMAGE_UNREADABLE);
+      }
     } catch (error) {
       this.logger.error('Bottle recognition error:', error);
-      await this.refundScan(userId, scanDay);
-      throw error;
+      if (providerFault) {
+        await this.refundScan(userId, scanDay);
+      }
+      if (error instanceof HttpException) throw error;
+      // Never a bare 500: anything unexpected here is reported as unavailable.
+      throw new ServiceUnavailableException(RECOGNITION_UNAVAILABLE);
     }
   }
 

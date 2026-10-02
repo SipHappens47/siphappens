@@ -51,6 +51,20 @@ function table(name, rows, log) {
       Object.assign(row, q.data);
       return row;
     },
+    // One atomic step, like a single SQL UPDATE ... WHERE: supports plain
+    // values plus { increment } and { decrement }.
+    updateMany: async (q) => {
+      log.push([name, 'updateMany', q]);
+      const hits = rows.filter((r) => match(r, q.where));
+      for (const row of hits) {
+        for (const [k, v] of Object.entries(q.data)) {
+          if (v && typeof v === 'object' && 'increment' in v) row[k] += v.increment;
+          else if (v && typeof v === 'object' && 'decrement' in v) row[k] -= v.decrement;
+          else row[k] = v;
+        }
+      }
+      return { count: hits.length };
+    },
     upsert: async (q) => { log.push([name, 'upsert', q]); return q.create; },
     aggregate: async (q) => { log.push([name, 'aggregate', q]); return { _avg: { rating: null } }; },
     delete: async (q) => { log.push([name, 'delete', q]); const i = rows.findIndex((r) => match(r, q.where)); return rows.splice(i, 1)[0]; },
