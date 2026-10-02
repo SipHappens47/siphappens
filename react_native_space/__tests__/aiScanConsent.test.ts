@@ -24,7 +24,10 @@ describe('Gemini scan consent', () => {
     expect(AI_SCAN_CONSENT_MESSAGE).toContain('improve its products and services');
     expect(AI_SCAN_CONSENT_MESSAGE).toContain('human reviewers may see them');
     expect(AI_SCAN_CONSENT_MESSAGE).toContain('avoid photos that show people or personal information');
-    expect(AI_SCAN_CONSENT_MESSAGE).toContain('search for bottles manually');
+    expect(AI_SCAN_CONSENT_MESSAGE).toContain('Nothing is sent');
+    expect(AI_SCAN_CONSENT_MESSAGE).toContain('look up bottles by name with Search');
+    // Shown on Explore too, which has no on-screen manual search (NF-9b).
+    expect(AI_SCAN_CONSENT_MESSAGE).not.toMatch(/manual/i);
   });
 
   it('asks once per account and remembers Continue', async () => {

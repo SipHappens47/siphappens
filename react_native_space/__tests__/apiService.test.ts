@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 import { apiService, resolveApiUrl, DEFAULT_API_URL, SESSION_EXPIRED_MESSAGE } from '../src/services/api';
 
 // ApiService builds its own axios instance, so mock axios.create with a fake
@@ -71,7 +72,12 @@ describe('resolveApiUrl', () => {
   it('defaults to the production backend when nothing is configured', () => {
     expect(DEFAULT_API_URL).toBe('https://siphappens.onrender.com/');
     expect(resolveApiUrl(undefined, undefined)).toBe(DEFAULT_API_URL);
-    expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ baseURL: DEFAULT_API_URL }));
+  });
+
+  it('builds the client from the resolved URL, whatever EXPO_PUBLIC_API_URL the shell has', () => {
+    // Same inputs api.ts used at import, so the check holds with the variable set or unset (NF-9a).
+    const expected = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL, Constants?.expoConfig?.extra?.apiUrl);
+    expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({ baseURL: expected }));
   });
 
   it('prefers a build-profile env URL, then app.json extra.apiUrl', () => {

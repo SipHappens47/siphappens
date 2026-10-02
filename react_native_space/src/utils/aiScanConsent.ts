@@ -11,7 +11,7 @@ export const AI_SCAN_CONSENT_MESSAGE =
   "To identify a bottle, SipHappens sends your photo to Google's Gemini AI.\n\n" +
   'SipHappens uses Gemini\'s free service, so Google may use the photos it receives to improve its products and services, and human reviewers may see them.\n\n' +
   'Please avoid photos that show people or personal information.\n\n' +
-  'Not now? You can still search for bottles manually without sending a photo.';
+  'Not now? Nothing is sent, and you can still look up bottles by name with Search.';
 
 export const aiScanConsentKey = (userId: string) => `aiScanConsent.v${CONSENT_VERSION}.${userId}`;
 
