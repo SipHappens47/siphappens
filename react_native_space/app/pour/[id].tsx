@@ -86,6 +86,27 @@ export default function PourDetailsScreen() {
     );
   };
 
+  const submitReport = async (reason: string) => {
+    try {
+      await apiService.reportContent('pour', pour?.id ?? '', reason);
+      Alert.alert('Reported', 'Thanks — our team will review this pour.');
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message ?? 'Failed to submit report');
+    }
+  };
+
+  const handleReport = () => {
+    // Same preset reasons as reporting an account (Alert.prompt is iOS-only).
+    Alert.alert('Report this pour', 'Why are you reporting it?', [
+      { text: 'Spam', onPress: () => submitReport('Spam') },
+      { text: 'Offensive or abusive', onPress: () => submitReport('Offensive or abusive') },
+      { text: 'Inappropriate content', onPress: () => submitReport('Inappropriate content') },
+      { text: 'Cancel', style: 'cancel' },
+    // Android shows at most three buttons (Cancel is dropped there), so let
+    // back / tap-outside dismiss without reporting.
+    ], { cancelable: true });
+  };
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -143,6 +164,15 @@ export default function PourDetailsScreen() {
                 onPress={handleDelete}
               />
             </>
+          )}
+          {pour?.userId && user?.id !== pour.userId && (
+            <IconButton
+              icon="flag-outline"
+              size={24}
+              iconColor={Colors.textMuted}
+              accessibilityLabel="Report this pour"
+              onPress={handleReport}
+            />
           )}
         </View>
       </View>

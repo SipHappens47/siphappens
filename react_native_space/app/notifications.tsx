@@ -113,6 +113,19 @@ export default function NotificationsScreen() {
     }
   };
 
+  // Declining removes the pending request (the sender can ask again later).
+  const handleDecline = async (connectionId: string) => {
+    try {
+      setProcessingId(connectionId);
+      await apiService.removeConnection(connectionId);
+      setRequests((prev) => prev.filter((r) => r.id !== connectionId));
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message ?? 'Failed to decline request');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const isEmpty = requests.length === 0 && cheers.length === 0;
 
   return (
@@ -166,15 +179,26 @@ export default function NotificationsScreen() {
                         <Text style={styles.itemTime}>{timeAgo(req?.createdAt ?? '')}</Text>
                       </View>
                     </Pressable>
-                    <Button
-                      mode="contained"
-                      compact
-                      onPress={() => handleAccept(req.id)}
-                      loading={processingId === req.id}
-                      disabled={processingId === req.id}
-                    >
-                      Accept
-                    </Button>
+                    <View style={styles.requestActions}>
+                      <Button
+                        mode="contained"
+                        compact
+                        onPress={() => handleAccept(req.id)}
+                        loading={processingId === req.id}
+                        disabled={processingId === req.id}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        mode="text"
+                        compact
+                        onPress={() => handleDecline(req.id)}
+                        disabled={processingId === req.id}
+                        textColor={Colors.textMuted}
+                      >
+                        Decline
+                      </Button>
+                    </View>
                   </View>
                 ))}
               </>
@@ -259,6 +283,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  requestActions: {
+    alignItems: 'stretch',
   },
   itemTextContainer: {
     flex: 1,
