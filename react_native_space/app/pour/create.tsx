@@ -134,7 +134,7 @@ export default function CreatePourScreen() {
         );
       }
 
-      await apiService.createPour({
+      const created = await apiService.createPour({
         spiritId: spirit?.id ?? '',
         whyItHit: whyItHit.trim(),
         isShared: isShared,
@@ -145,15 +145,29 @@ export default function CreatePourScreen() {
         occasions: occasions.length > 0 ? occasions.join(',') : undefined,
       });
 
-      Alert.alert('Success', 'Pour saved successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            checkBadgeProgress(); // fire-and-forget: toast appears over the shelf
-            router.replace('/tabs/shelf');
-          },
-        },
-      ]);
+      const goToShelf = () => {
+        checkBadgeProgress(); // fire-and-forget: toast appears over the shelf
+        router.replace('/tabs/shelf');
+      };
+      const shareNow = async () => {
+        try {
+          await apiService.updatePour(created.id, { isShared: true });
+          Alert.alert('Shared to The Bar', 'Your fellow sippers can now see this pour.', [{ text: 'OK', onPress: goToShelf }]);
+        } catch (shareError) {
+          console.error('Failed to share pour:', shareError);
+          Alert.alert("Couldn't share", 'Your pour is still saved privately. You can share it later from your Shelf.', [{ text: 'OK', onPress: goToShelf }]);
+        }
+      };
+
+      // Say where the pour went; private stays the default.
+      if (isShared) {
+        Alert.alert('Posted to The Bar', 'Your pour is saved to your Shelf and shared on The Bar.', [{ text: 'OK', onPress: goToShelf }]);
+      } else {
+        Alert.alert('Saved privately', 'Your pour is saved to your Shelf. Only you can see it.', [
+          ...(created?.id ? [{ text: 'Share to The Bar', onPress: shareNow }] : []),
+          { text: 'OK', onPress: goToShelf },
+        ]);
+      }
     } catch (error) {
       console.error('Failed to save pour:', error);
       Alert.alert('Error', 'Failed to save pour. Please try again.');
