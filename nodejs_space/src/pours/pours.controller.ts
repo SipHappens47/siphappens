@@ -47,8 +47,8 @@ export class PoursController {
   @Get('user/:userId/public')
   @ApiOperation({ summary: 'Get public pours for a specific user (shared to The Bar)' })
   @ApiResponse({ status: 200, description: 'Public pours retrieved successfully' })
-  async getUserPublicPours(@Param('userId') userId: string) {
-    return this.poursService.getUserPublicPours(userId);
+  async getUserPublicPours(@Param('userId') userId: string, @Request() req: any) {
+    return this.poursService.getUserPublicPours(userId, req.user.userId);
   }
 
   @Get(':id')

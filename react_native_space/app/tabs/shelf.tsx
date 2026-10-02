@@ -10,6 +10,8 @@ import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { pluralise } from '../../src/utils/strings';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLoadSection } from '../../src/hooks/useLoadSection';
+import { LoadNotice } from '../../src/components/LoadNotice';
 import { useAuth } from '../../src/context/AuthContext';
 
 export default function ShelfScreen() {
@@ -18,70 +20,36 @@ export default function ShelfScreen() {
   const distilleryId = user?.distilleryId;
 
   const [activeTab, setActiveTab] = useState('pours');
-  const [pours, setPours] = useState<Pour[]>([]);
-  const [filteredPours, setFilteredPours] = useState<Pour[]>([]);
-  const [radarEntries, setRadarEntries] = useState<RadarEntry[]>([]);
-  const [distillerySpirits, setDistillerySpirits] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const scope = user ? `${user.id}:${distilleryId ?? ''}:${isDistilleryAccount}` : null;
+  const pourSection = useLoadSection<Pour[]>(scope);
+  const radarSection = useLoadSection<RadarEntry[]>(scope);
+  const spiritSection = useLoadSection<any[]>(scope);
+  const pours = pourSection.data ?? [];
+  const radarEntries = radarSection.data ?? [];
+  const distillerySpirits = spiritSection.data ?? [];
+  const setRadarEntries = radarSection.setData;
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchVisible, setSearchVisible] = useState(false);
   
   const router = useRouter();
 
-  const loadPours = async () => {
-    try {
-      const data = await apiService.getPours();
-      setPours(data ?? []);
-      setFilteredPours(data ?? []);
-    } catch (error) {
-      console.error('Failed to load pours:', error);
-      Alert.alert('Error', 'Failed to load your pours. Please try again.');
-    }
-  };
-
-  const loadRadar = async () => {
-    try {
-      const data = await apiService.getRadar();
-      setRadarEntries(data ?? []);
-    } catch (error: any) {
-      console.error('Failed to load radar:', error);
-      const message = error?.response?.data?.message ?? 'Failed to load your radar. Please try again.';
-      Alert.alert('Error', message);
-    }
-  };
-
-  const loadDistillerySpirits = async () => {
-    if (!distilleryId) return;
-    try {
-      const data = await apiService.getDistillerySpirits(distilleryId);
-      setDistillerySpirits(data ?? []);
-    } catch (error) {
-      console.error('Failed to load distillery spirits:', error);
-      Alert.alert('Error', 'Failed to load your spirits. Please try again.');
-    }
-  };
-
+  const loadPours = () => pourSection.load(() => apiService.getPours());
+  const loadRadar = () => radarSection.load(() => apiService.getRadar());
+  const loadDistillerySpirits = () => spiritSection.load(() => {
+    if (!distilleryId) return Promise.reject(new Error('Missing distillery'));
+    return apiService.getDistillerySpirits(distilleryId);
+  });
   const loadData = async () => {
-    try {
-      setLoading(true);
-      if (isDistilleryAccount && distilleryId) {
-        // Load distillery spirits for distillery accounts
-        await loadDistillerySpirits();
-      } else {
-        // Load personal pours and radar for regular accounts
-        await Promise.all([loadPours(), loadRadar()]);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    if (isDistilleryAccount) await loadDistillerySpirits();
+    else await Promise.all([loadPours(), loadRadar()]);
+    setRefreshing(false);
   };
 
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [])
+    }, [scope])
   );
 
   const handleRefresh = () => {
@@ -89,23 +57,13 @@ export default function ShelfScreen() {
     loadData();
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (!query?.trim()) {
-      setFilteredPours(pours);
-      return;
-    }
-
-    const lowerQuery = query.toLowerCase();
-    const filtered = (pours ?? []).filter(
-      (pour) =>
-        pour?.spirit?.name?.toLowerCase()?.includes(lowerQuery) ??
-        pour?.spirit?.distilleryName?.toLowerCase()?.includes(lowerQuery) ??
-        pour?.whyItHit?.toLowerCase()?.includes(lowerQuery) ??
-        false
-    );
-    setFilteredPours(filtered);
-  };
+  const handleSearch = (query: string) => setSearchQuery(query);
+  const lowerQuery = searchQuery.trim().toLowerCase();
+  const filteredPours = !lowerQuery ? pours : pours.filter(pour =>
+    pour?.spirit?.name?.toLowerCase()?.includes(lowerQuery) ??
+    pour?.spirit?.distilleryName?.toLowerCase()?.includes(lowerQuery) ??
+    pour?.whyItHit?.toLowerCase()?.includes(lowerQuery) ?? false
+  );
 
   const handleRemoveFromRadar = async (spiritId: string) => {
     try {
@@ -385,7 +343,8 @@ export default function ShelfScreen() {
           keyExtractor={(item) => item?.id ?? ''}
           renderItem={({ item }) => <DistillerySpiritItem item={item} />}
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={!loading ? renderDistilleryShelfEmpty : null}
+          ListHeaderComponent={<LoadNotice name="your spirits" section={{ ...spiritSection, retry: loadDistillerySpirits }} />}
+          ListEmptyComponent={spiritSection.data !== undefined && !spiritSection.error ? renderDistilleryShelfEmpty : null}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -418,7 +377,6 @@ export default function ShelfScreen() {
               onIconPress={() => {
                 setSearchVisible(false);
                 setSearchQuery('');
-                setFilteredPours(pours);
               }}
               icon="close"
             />
@@ -454,7 +412,8 @@ export default function ShelfScreen() {
           keyExtractor={(item) => item?.id ?? ''}
           renderItem={({ item }) => <PourListItem item={item} />}
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={!loading ? renderPoursEmpty : null}
+          ListHeaderComponent={<LoadNotice name="your pours" section={{ ...pourSection, retry: loadPours }} />}
+          ListEmptyComponent={pourSection.data !== undefined && !pourSection.error ? renderPoursEmpty : null}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -469,7 +428,8 @@ export default function ShelfScreen() {
           keyExtractor={(item) => item?.id ?? ''}
           renderItem={({ item }) => <RadarItemComponent item={item} />}
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={!loading ? renderRadarEmpty : null}
+          ListHeaderComponent={<LoadNotice name="your radar" section={{ ...radarSection, retry: loadRadar }} />}
+          ListEmptyComponent={radarSection.data !== undefined && !radarSection.error ? renderRadarEmpty : null}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

@@ -4,6 +4,7 @@ import { CreatePourDto } from './dto/create-pour.dto';
 import { UpdatePourDto } from './dto/update-pour.dto';
 import { BadgesService } from '../badges/badges.service';
 import { ProfileService } from '../profile/profile.service';
+import { assertNotBlocked } from '../moderation/blocking';
 
 @Injectable()
 export class PoursService {
@@ -13,8 +14,23 @@ export class PoursService {
     private profileService: ProfileService,
   ) {}
 
+  // SH-C03: a pour may only attach an image file the caller uploaded.
+  private async assertOwnImage(userId: string, fileId: string) {
+    const file = await this.prisma.file.findUnique({
+      where: { id: fileId },
+      select: { userid: true },
+    });
+    if (!file || file.userid !== userId) {
+      throw new ForbiddenException('Image not found');
+    }
+  }
+
   async createPour(userId: string, dto: CreatePourDto) {
     const { flavorTagIds, ...pourData } = dto;
+
+    if (dto.image) {
+      await this.assertOwnImage(userId, dto.image);
+    }
 
     const pour = await this.prisma.pour.create({
       data: {
@@ -154,6 +170,9 @@ export class PoursService {
       throw new NotFoundException('Pour not found');
     }
 
+    // Blocked either way: the pour does not exist for this viewer
+    await assertNotBlocked(this.prisma, userId, pour.userid, 'Pour not found');
+
     // Allow access if user is the owner OR the pour is shared
     if (pour.userid !== userId && !pour.isshared) {
       throw new ForbiddenException('Access denied');
@@ -174,6 +193,10 @@ export class PoursService {
     }
 
     const { flavorTagIds, ...pourData } = dto;
+
+    if (pourData.image && pourData.image !== existingPour.image) {
+      await this.assertOwnImage(userId, pourData.image);
+    }
 
     if (flavorTagIds !== undefined) {
       await this.prisma.pourflavortag.deleteMany({
@@ -240,7 +263,10 @@ export class PoursService {
     return { message: 'Pour deleted successfully' };
   }
 
-  async getUserPublicPours(userId: string) {
+  async getUserPublicPours(userId: string, viewerId?: string) {
+    if (viewerId) {
+      await assertNotBlocked(this.prisma, viewerId, userId);
+    }
     const pours = await this.prisma.pour.findMany({
       where: {
         userid: userId,

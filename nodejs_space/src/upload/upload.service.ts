@@ -1,6 +1,14 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as s3 from '../lib/s3';
+import {
+  buildUserStoragePath,
+  canDeleteStorageObject,
+  isOwnedStoragePath,
+  isPublicStoragePath,
+  isTrustedFileRecord,
+} from './storage-ownership';
+import { isBlockedBetween } from '../moderation/blocking';
 import { PresignedUploadDto } from './dto/presigned-upload.dto';
 import { CompleteUploadDto } from './dto/complete-upload.dto';
 import { InitiateMultipartDto } from './dto/initiate-multipart.dto';
@@ -9,7 +17,17 @@ import { CompleteMultipartDto } from './dto/complete-multipart.dto';
 
 @Injectable()
 export class UploadService {
+  private readonly logger = new Logger(UploadService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  // SH-C03: a caller may only register objects in its own namespace, and
+  // each object only once.
+  private assertOwnedPath(userId: string, cloud_storage_path: string) {
+    if (!isOwnedStoragePath(userId, cloud_storage_path)) {
+      throw new ForbiddenException('Upload path was not issued to this account');
+    }
+  }
 
   async generatePresignedUrl(userId: string, dto: PresignedUploadDto) {
     console.log('Backend: generatePresignedUrl called for user:', userId, 'dto:', dto);
@@ -17,9 +35,12 @@ export class UploadService {
 
     try {
       const { uploadUrl, cloud_storage_path } = await s3.generatePresignedUploadUrl(
-        fileName,
+        buildUserStoragePath(
+          userId,
+          fileName,
+          isPublic ? 'public' : s3.privateBucketConfigured() ? 'secure' : 'private',
+        ),
         contentType,
-        isPublic,
       );
 
       console.log('Backend: Presigned URL generated successfully:', { cloud_storage_path, hasUploadUrl: !!uploadUrl });
@@ -38,7 +59,16 @@ export class UploadService {
   async completeUpload(userId: string, dto: CompleteUploadDto) {
     const { cloud_storage_path, fileName, mimeType, fileSize } = dto;
 
-    const isPublic = cloud_storage_path.includes('public/uploads/');
+    this.assertOwnedPath(userId, cloud_storage_path);
+    const existing = await this.prisma.file.findFirst({
+      where: { cloudstoragepath: cloud_storage_path },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('This upload has already been completed');
+    }
+
+    const isPublic = isPublicStoragePath(cloud_storage_path);
 
     const file = await this.prisma.file.create({
       data: {
@@ -73,6 +103,7 @@ export class UploadService {
 
   async getPartUrl(userId: string, dto: GetPartUrlDto) {
     const { cloud_storage_path, uploadId, partNumber } = dto;
+    this.assertOwnedPath(userId, cloud_storage_path);
 
     const presignedUrl = await s3.getPresignedUrlForPart(cloud_storage_path, uploadId, partNumber);
 
@@ -84,10 +115,11 @@ export class UploadService {
 
   async completeMultipart(userId: string, dto: CompleteMultipartDto) {
     const { cloud_storage_path, uploadId, parts, fileName, mimeType, fileSize } = dto;
+    this.assertOwnedPath(userId, cloud_storage_path);
 
     await s3.completeMultipartUpload(cloud_storage_path, uploadId, parts);
 
-    const isPublic = cloud_storage_path.includes('public/uploads/');
+    const isPublic = isPublicStoragePath(cloud_storage_path);
 
     const file = await this.prisma.file.create({
       data: {
@@ -120,18 +152,34 @@ export class UploadService {
       throw new NotFoundException('File not found');
     }
 
-    // Allow access if:
-    // 1. File is public, OR
-    // 2. User is the file owner, OR
-    // 3. File is a pour image for a shared pour
-    const isSharedPourImage = file.pours?.some((pour: any) => pour.isshared === true);
-    const hasAccess = file.ispublic || file.userid === userId || isSharedPourImage;
+    // A record registered against someone else's object grants nothing.
+    if (!(await isTrustedFileRecord(this.prisma, file))) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    // SH-C02: pour photos and private files of a blocked user do not exist for the viewer.
+    const blockable = (file.pours?.length ?? 0) > 0 || !file.ispublic;
+    if (file.userid !== userId && blockable && (await isBlockedBetween(this.prisma, userId, file.userid))) {
+      throw new NotFoundException('File not found');
+    }
+
+    // SH-C04: a pour photo follows its pour's share state, not the file's
+    // upload-time public flag. Access is the owner, or anyone while one of the
+    // owner's own pours using it is shared. Other files: owner, or public.
+    const isPourPhoto = (file.pours?.length ?? 0) > 0;
+    const hasAccess =
+      file.userid === userId ||
+      (isPourPhoto
+        ? file.pours.some((pour: any) => pour.userid === file.userid && pour.isshared === true)
+        : file.ispublic);
 
     if (!hasAccess) {
       throw new ForbiddenException('Access denied');
     }
 
-    const url = await s3.getFileUrl(file.cloudstoragepath, file.ispublic, mode);
+    // Pour photos are only ever handed out as short-lived signed URLs, so
+    // unsharing a pour stops new access through the app.
+    const url = await s3.getFileUrl(file.cloudstoragepath, file.ispublic && !isPourPhoto, mode);
 
     return {
       url,
@@ -153,7 +201,11 @@ export class UploadService {
       throw new ForbiddenException('Access denied');
     }
 
-    await s3.deleteFile(file.cloudstoragepath);
+    if (await canDeleteStorageObject(this.prisma, file)) {
+      await s3.deleteFile(file.cloudstoragepath);
+    } else {
+      this.logger.warn(`Kept storage object for file ${file.id}: ownership not provable`);
+    }
     await this.prisma.file.delete({ where: { id: fileId } });
 
     return { message: 'File deleted successfully' };

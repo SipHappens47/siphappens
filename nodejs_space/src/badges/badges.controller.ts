@@ -1,5 +1,7 @@
 import { Controller, Get, UseGuards, Request, Param } from '@nestjs/common';
 import { BadgesService } from './badges.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { assertNotBlocked } from '../moderation/blocking';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
@@ -8,7 +10,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 @UseGuards(JwtAuthGuard)
 @Controller('api/badges')
 export class BadgesController {
-  constructor(private readonly badgesService: BadgesService) {}
+  constructor(
+    private readonly badgesService: BadgesService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('me')
   @ApiOperation({
@@ -44,7 +49,8 @@ export class BadgesController {
     description:
       'Returns all badges with unlock status and progress for a specific user',
   })
-  async getUserBadges(@Param('userId') userId: string) {
+  async getUserBadges(@Param('userId') userId: string, @Request() req: any) {
+    await assertNotBlocked(this.prisma, req.user.userId, userId);
     return this.badgesService.getUserBadgesWithProgress(userId);
   }
 
@@ -54,7 +60,8 @@ export class BadgesController {
     description:
       'Returns flavor count, region count, distillery count, and distributions for a specific user',
   })
-  async getUserTasteSummary(@Param('userId') userId: string) {
+  async getUserTasteSummary(@Param('userId') userId: string, @Request() req: any) {
+    await assertNotBlocked(this.prisma, req.user.userId, userId);
     return this.badgesService.getTasteSummary(userId);
   }
 }

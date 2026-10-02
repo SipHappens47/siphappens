@@ -172,7 +172,6 @@ export interface RadarEntry {
 export interface UniversalSearchUser {
   id: string;
   name: string;
-  email: string;
   profilePhoto?: string;
   experienceLevel?: string;
   isOfficial?: boolean;

@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePhotoDto } from './dto/update-photo.dto';
 import * as s3 from '../lib/s3';
+import { canDeleteStorageObject } from '../upload/storage-ownership';
+import { assertNotBlocked } from '../moderation/blocking';
 
 @Injectable()
 export class ProfileService {
@@ -18,11 +20,16 @@ export class ProfileService {
   async deleteAccount(userId: string) {
     const files = await this.prisma.file.findMany({
       where: { userid: userId },
-      select: { cloudstoragepath: true },
+      select: { id: true, userid: true, cloudstoragepath: true },
     });
 
     for (const file of files) {
       try {
+        // SH-C03/W04: never delete an object this account cannot prove it owns.
+        if (!(await canDeleteStorageObject(this.prisma, file))) {
+          this.logger.warn(`Kept storage object for file ${file.id}: ownership not provable`);
+          continue;
+        }
         await s3.deleteFile(file.cloudstoragepath);
       } catch (err: any) {
         // Non-fatal: a missing storage object shouldn't block account deletion.
@@ -258,8 +265,12 @@ export class ProfileService {
     };
   }
 
-  async getPublicProfile(userId: string) {
+  async getPublicProfile(userId: string, viewerId?: string) {
     try {
+      if (viewerId) {
+        await assertNotBlocked(this.prisma, viewerId, userId);
+      }
+
       console.log('[ProfileService] Getting public profile for userId:', userId);
       
       const user = await this.prisma.user.findUnique({

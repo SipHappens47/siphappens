@@ -4,6 +4,9 @@ import { AdminService } from '../admin/admin.service';
 import { ReportDto } from './dto/report.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
 import * as s3 from '../lib/s3';
+import { canDeleteStorageObject } from '../upload/storage-ownership';
+import { getHiddenUserIds } from './blocking';
+import { BANNED_EMAIL_TARGET, recordBannedEmail } from './banned-emails';
 
 @Injectable()
 export class ModerationService {
@@ -37,6 +40,15 @@ export class ModerationService {
       update: {},
       create: { blockerid: blockerId, blockedid: blockedId },
     });
+    // SH-C02: a block ends any connection or pending request between the pair.
+    await this.prisma.connection.deleteMany({
+      where: {
+        OR: [
+          { initiatorid: blockerId, receiverid: blockedId },
+          { initiatorid: blockedId, receiverid: blockerId },
+        ],
+      },
+    });
     return { success: true };
   }
 
@@ -55,25 +67,29 @@ export class ModerationService {
     return blocks.map((b) => b.blockedid);
   }
 
+  // Users this user blocked, with just enough to show an unblock list
+  // (the blocked user's profile itself is no longer reachable).
+  async getMyBlockedUsers(userId: string) {
+    const blocks = await this.prisma.block.findMany({
+      where: { blockerid: userId },
+      select: { createdat: true, blocked: { select: { id: true, name: true } } },
+      orderBy: { createdat: 'desc' },
+    });
+    return blocks.map((b) => ({ id: b.blocked.id, name: b.blocked.name, blockedAt: b.createdat }));
+  }
+
   // Every user id the given user should not see content from: people they
   // blocked, plus people who blocked them. Used to filter feeds and search.
   async getHiddenUserIds(userId: string): Promise<string[]> {
-    const blocks = await this.prisma.block.findMany({
-      where: { OR: [{ blockerid: userId }, { blockedid: userId }] },
-      select: { blockerid: true, blockedid: true },
-    });
-    const ids = new Set<string>();
-    for (const b of blocks) {
-      ids.add(b.blockerid === userId ? b.blockedid : b.blockerid);
-    }
-    return [...ids];
+    return getHiddenUserIds(this.prisma, userId);
   }
 
   // ---- Admin review ----------------------------------------------------
   async listReports(adminUserId: string, status: string = 'Open') {
     await this.adminService.checkAdminAccess(adminUserId);
     return this.prisma.report.findMany({
-      where: { status: status as any },
+      // Ban records are bookkeeping, not reports to review.
+      where: { status: status as any, targettype: { not: BANNED_EMAIL_TARGET } },
       orderBy: { createdat: 'desc' },
       include: { reporter: { select: { id: true, name: true, email: true } } },
     });
@@ -100,7 +116,12 @@ export class ModerationService {
         userIdToBan = pour?.userid ?? null;
       }
       if (userIdToBan) {
-        await this.deleteUserAndStorage(userIdToBan);
+        const banned = await this.prisma.user.findUnique({ where: { id: userIdToBan }, select: { email: true } });
+        if (banned) {
+          // Remember the email before the account is deleted so it can't sign up again.
+          await recordBannedEmail(this.prisma, adminUserId, banned.email, reportId);
+          await this.deleteUserAndStorage(userIdToBan);
+        }
       }
     }
 
@@ -116,10 +137,15 @@ export class ModerationService {
   private async deleteUserAndStorage(userId: string) {
     const files = await this.prisma.file.findMany({
       where: { userid: userId },
-      select: { cloudstoragepath: true },
+      select: { id: true, userid: true, cloudstoragepath: true },
     });
     for (const file of files) {
       try {
+        // SH-C03/W04: never delete an object this account cannot prove it owns.
+        if (!(await canDeleteStorageObject(this.prisma, file))) {
+          this.logger.warn(`Kept storage object for file ${file.id}: ownership not provable`);
+          continue;
+        }
         await s3.deleteFile(file.cloudstoragepath);
       } catch (err: any) {
         this.logger.warn(`Failed to delete storage object ${file.cloudstoragepath}: ${err?.message}`);

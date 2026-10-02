@@ -30,8 +30,8 @@ export class ProfileController {
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get public user profile by ID' })
   @ApiResponse({ status: 200, description: 'Public profile retrieved successfully' })
-  async getPublicProfile(@Param('userId') userId: string) {
-    return this.profileService.getPublicProfile(userId);
+  async getPublicProfile(@Param('userId') userId: string, @Request() req: any) {
+    return this.profileService.getPublicProfile(userId, req.user.userId);
   }
 
   @Put()

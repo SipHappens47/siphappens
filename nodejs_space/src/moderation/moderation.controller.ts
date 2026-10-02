@@ -36,6 +36,13 @@ export class ModerationController {
     return this.moderationService.unblockUser(req.user.userId, userId);
   }
 
+  @Get('blocks/users')
+  @ApiOperation({ summary: 'List users the current user has blocked (id and name, for unblocking)' })
+  @ApiResponse({ status: 200, description: 'Blocked users' })
+  async blockedUsers(@Request() req: any) {
+    return this.moderationService.getMyBlockedUsers(req.user.userId);
+  }
+
   @Get('blocks')
   @ApiOperation({ summary: 'List user ids the current user has blocked' })
   @ApiResponse({ status: 200, description: 'Blocked user ids' })

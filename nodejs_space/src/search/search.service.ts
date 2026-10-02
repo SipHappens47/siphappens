@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { getHiddenUserIds } from '../moderation/blocking';
 
 @Injectable()
 export class SearchService {
@@ -20,16 +21,17 @@ export class SearchService {
     }
 
     const searchTerm = query.trim().toLowerCase();
+    const hiddenUserIds = await getHiddenUserIds(this.prisma, currentUserId);
 
     // Execute searches sequentially to avoid exhausting database connection pool
     // Most important searches first (spirits, users) for faster perceived performance
     const spirits = await this.searchSpirits(searchTerm);
-    const users = await this.searchUsers(searchTerm, currentUserId);
+    const users = await this.searchUsers(searchTerm, currentUserId, hiddenUserIds);
     const distilleries = await this.searchDistilleries(searchTerm);
     const flavorTags = await this.searchFlavorTags(searchTerm);
     const categories = await this.searchCategories(searchTerm);
     const locations = await this.searchLocations(searchTerm);
-    const reviews = await this.searchReviews(searchTerm, currentUserId);
+    const reviews = await this.searchReviews(searchTerm, currentUserId, hiddenUserIds);
 
     return {
       users,
@@ -42,25 +44,21 @@ export class SearchService {
     };
   }
 
-  private async searchUsers(searchTerm: string, currentUserId: string) {
+  private async searchUsers(searchTerm: string, currentUserId: string, hiddenUserIds: string[]) {
     const users = await this.prisma.user.findMany({
       where: {
         AND: [
           { id: { not: currentUserId } },
           // Verified distillery owners appear in results as their distillery, not as a user
           { owneddistillery: { none: { verified: true } } },
-          {
-            OR: [
-              { name: { contains: searchTerm, mode: 'insensitive' } },
-              { email: { contains: searchTerm, mode: 'insensitive' } },
-            ],
-          },
+          // Names only: matching email fragments would let anyone probe who has an account.
+          { name: { contains: searchTerm, mode: 'insensitive' } },
+          { id: { notIn: hiddenUserIds } },
         ],
       },
       select: {
         id: true,
         name: true,
-        email: true,
         profilephoto: true,
         experiencelevel: true,
         isofficial: true,
@@ -71,7 +69,6 @@ export class SearchService {
     return users.map((user) => ({
       id: user.id,
       name: user.name,
-      email: user.email,
       profilePhoto: user.profilephoto,
       experienceLevel: user.experiencelevel,
       isOfficial: user.isofficial ?? false,
@@ -270,13 +267,14 @@ export class SearchService {
     return locations.slice(0, 5);
   }
 
-  private async searchReviews(searchTerm: string, currentUserId: string) {
+  private async searchReviews(searchTerm: string, currentUserId: string, hiddenUserIds: string[]) {
     // Search in pour review text (whyithit field)
     // Only search in shared pours or current user's pours
     const pours = await this.prisma.pour.findMany({
       where: {
         AND: [
           { whyithit: { contains: searchTerm, mode: 'insensitive' } },
+          { userid: { notIn: hiddenUserIds } },
           {
             OR: [
               { isshared: true },

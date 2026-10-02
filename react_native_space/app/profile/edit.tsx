@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, TextInput, Button, Menu, Divider, IconButton, Switch } from 'react-native-paper';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { apiService } from '../../src/services/api';
@@ -13,6 +13,10 @@ import { spacing } from '../../src/constants/theme';
 export default function EditProfileScreen() {
   const { refreshUser, logout } = useAuth();
   const router = useRouter();
+  // "Account & settings" on My Profile opens this screen at the account section.
+  const { section } = useLocalSearchParams<{ section?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const scrolledToAccount = useRef(false);
 
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
@@ -158,7 +162,16 @@ export default function EditProfileScreen() {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.scrollContent}
+          onContentSizeChange={() => {
+            if (section === 'account' && !scrolledToAccount.current) {
+              scrolledToAccount.current = true;
+              scrollRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
+        >
           <View style={styles.photoSection}>
             <ImagePickerComponent
               imageUri={profilePhotoUri}
@@ -270,6 +283,15 @@ export default function EditProfileScreen() {
 
           {/* Logout Section */}
           <View style={styles.logoutSection}>
+            <Button
+              mode="text"
+              icon="account-cancel-outline"
+              onPress={() => router.push('/profile/blocked')}
+              style={styles.blockedButton}
+              textColor={Colors.textSecondary}
+            >
+              Blocked users
+            </Button>
             <Button
               mode="outlined"
               onPress={handleLogout}
@@ -399,6 +421,9 @@ const styles = StyleSheet.create({
   logoutSection: {
     marginTop: spacing.md,
     marginBottom: spacing.xl,
+  },
+  blockedButton: {
+    marginBottom: spacing.sm,
   },
   logoutButton: {
     borderColor: Colors.error,

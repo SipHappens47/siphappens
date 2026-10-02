@@ -9,6 +9,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { uploadService } from '../../src/services/upload';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { SlowServerNotice } from '../../src/components/SlowServerNotice';
 
 type AccountType = 'sipper' | 'distillery' | null;
 
@@ -137,7 +138,7 @@ export default function SignupScreen() {
     
     if (!ageVerified) {
       console.log('[Signup] Age not verified');
-      Alert.alert('Age Verification', 'Please confirm you are of legal drinking age.');
+      Alert.alert('Age Verification', 'Please confirm you are 18 or older.');
       return;
     }
 
@@ -416,7 +417,7 @@ export default function SignupScreen() {
                   color={Colors.accent}
                 />
                 <Text style={[styles.checkboxLabel, { fontSize: isSmallScreen ? 12 : 13 }]}>
-                  I confirm I am of legal drinking age.
+                  I confirm I am 18 or older.
                 </Text>
               </View>
 
@@ -430,6 +431,7 @@ export default function SignupScreen() {
               >
                 {accountType === 'distillery' ? 'Register Distillery' : 'Sign Up'}
               </Button>
+              <SlowServerNotice active={loading} />
 
               <Text style={styles.agreementText}>
                 By signing up you agree to our{' '}

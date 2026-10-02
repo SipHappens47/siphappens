@@ -5,6 +5,23 @@
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 const BUCKET = process.env.SUPABASE_BUCKET || 'uploads';
+// Optional private bucket (SH-C04). When set, new private uploads are stored
+// there under secure/<userId>/... and are only ever served through
+// short-lived signed URLs. Unset: private uploads stay in BUCKET as before.
+const PRIVATE_BUCKET = process.env.SUPABASE_PRIVATE_BUCKET || '';
+const SIGNED_URL_TTL_SECONDS = 3600;
+
+export function privateBucketConfigured(): boolean {
+  return !!PRIVATE_BUCKET;
+}
+
+function bucketFor(cloud_storage_path: string): string {
+  if (!cloud_storage_path.startsWith('secure/')) return BUCKET;
+  if (!PRIVATE_BUCKET) {
+    throw new Error('Private storage is not configured (SUPABASE_PRIVATE_BUCKET)');
+  }
+  return PRIVATE_BUCKET;
+}
 
 function assertConfig() {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -15,20 +32,15 @@ const authHeaders = () => ({
   Authorization: `Bearer ${SUPABASE_KEY}`,
   apikey: SUPABASE_KEY,
 });
-const sanitize = (name: string) => (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
-const randomId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-
+// The caller (UploadService) generates the owner-namespaced path; see
+// upload/storage-ownership.ts.
 export async function generatePresignedUploadUrl(
-  fileName: string,
+  cloud_storage_path: string,
   _contentType: string,
-  isPublic = false,
 ): Promise<{ uploadUrl: string; cloud_storage_path: string }> {
   assertConfig();
-  const prefix = isPublic ? 'public/uploads/' : 'private/uploads/';
-  const cloud_storage_path = `${prefix}${randomId()}-${sanitize(fileName)}`;
-
   const res = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/upload/sign/${BUCKET}/${cloud_storage_path}`,
+    `${SUPABASE_URL}/storage/v1/object/upload/sign/${bucketFor(cloud_storage_path)}/${cloud_storage_path}`,
     { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: '{}' },
   );
   if (!res.ok) throw new Error(`Supabase sign-upload failed: ${res.status} ${await res.text()}`);
@@ -43,15 +55,16 @@ export async function getFileUrl(
   _mode: 'view' | 'download' = 'view',
 ): Promise<string> {
   assertConfig();
-  if (isPublic) {
+  const bucket = bucketFor(cloud_storage_path);
+  if (isPublic && bucket === BUCKET) {
     return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${cloud_storage_path}`;
   }
   const res = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${cloud_storage_path}`,
+    `${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${cloud_storage_path}`,
     {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ expiresIn: 3600 }),
+      body: JSON.stringify({ expiresIn: SIGNED_URL_TTL_SECONDS }),
     },
   );
   if (!res.ok) throw new Error(`Supabase sign-url failed: ${res.status} ${await res.text()}`);
@@ -61,7 +74,7 @@ export async function getFileUrl(
 
 export async function deleteFile(cloud_storage_path: string): Promise<void> {
   assertConfig();
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${cloud_storage_path}`, {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucketFor(cloud_storage_path)}/${cloud_storage_path}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });

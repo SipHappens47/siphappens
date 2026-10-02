@@ -36,6 +36,7 @@ export default function PublicUserProfileScreen() {
   const [isOfficial, setIsOfficial] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -46,6 +47,7 @@ export default function PublicUserProfileScreen() {
   const loadPublicProfile = async () => {
     try {
       setLoading(true);
+      setNotFound(false);
       
       // userId might be an array from route params, ensure it's a string
       const userIdString = Array.isArray(userId) ? userId[0] : userId;
@@ -127,7 +129,13 @@ export default function PublicUserProfileScreen() {
       }
     } catch (error: any) {
       console.error('[PublicProfile] Failed to load:', error?.response?.data?.message ?? error?.message);
-      Alert.alert('Error', error?.response?.data?.message ?? 'Failed to load user profile');
+      // Blocked (either way) or deleted accounts answer 404: show a calm
+      // "not available" screen rather than an error alert.
+      if (error?.response?.status === 404) {
+        setNotFound(true);
+      } else {
+        Alert.alert('Error', error?.response?.data?.message ?? 'Failed to load user profile');
+      }
     } finally {
       setLoading(false);
     }
@@ -199,6 +207,21 @@ export default function PublicUserProfileScreen() {
     );
   };
 
+  const handleDeclineRequest = async () => {
+    if (!connectionId) return;
+
+    try {
+      setActionLoading(true);
+      await apiService.removeConnection(connectionId);
+      setConnectionStatus('none');
+      setConnectionId(null);
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message ?? 'Failed to decline request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleMuteToggle = async () => {
     const userIdString = Array.isArray(userId) ? userId[0] : String(userId);
     try {
@@ -252,7 +275,9 @@ export default function PublicUserProfileScreen() {
       { text: 'Offensive or abusive', onPress: () => submitReport('Offensive or abusive') },
       { text: 'Inappropriate content', onPress: () => submitReport('Inappropriate content') },
       { text: 'Cancel', style: 'cancel' },
-    ]);
+    // Android shows at most three buttons (Cancel is dropped there), so let
+    // back / tap-outside dismiss without reporting.
+    ], { cancelable: true });
   };
 
   const renderConnectionButton = () => {
@@ -295,15 +320,24 @@ export default function PublicUserProfileScreen() {
         );
       case 'pending-received':
         return (
-          <Button
-            mode="contained"
-            onPress={handleAcceptRequest}
-            style={styles.connectionButton}
-            contentStyle={styles.buttonContent}
-            icon="account-plus"
-          >
-            Accept Follow
-          </Button>
+          <>
+            <Button
+              mode="contained"
+              onPress={handleAcceptRequest}
+              style={styles.connectionButton}
+              contentStyle={styles.buttonContent}
+              icon="account-plus"
+            >
+              Accept Follow
+            </Button>
+            <Button
+              mode="text"
+              onPress={handleDeclineRequest}
+              textColor={Colors.textMuted}
+            >
+              Decline
+            </Button>
+          </>
         );
       case 'none':
       default:
@@ -335,7 +369,11 @@ export default function PublicUserProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>User not found</Text>
+          <Text style={notFound ? styles.notFoundTitle : styles.errorText}>{notFound ? 'Profile not available' : 'User not found'}</Text>
+          {notFound ? (
+            <Text style={styles.notFoundText}>This account may have been removed or isn't visible to you.</Text>
+          ) : null}
+          <Button onPress={() => router.back()}>Go Back</Button>
         </View>
       </SafeAreaView>
     );
@@ -553,6 +591,19 @@ const styles = StyleSheet.create({
   errorText: {
     color: Colors.error,
     fontSize: 16,
+  },
+  notFoundTitle: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  notFoundText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   scrollContent: {
     padding: spacing.lg,

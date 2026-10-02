@@ -70,6 +70,8 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string, additionalData?: any) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  /** True after the server rejected the stored token mid-session; cleared on the next login or signup. */
+  sessionExpired: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,6 +79,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Registered before the startup check so a rejected stored token is handled
+  // the same way at launch and mid-session: sign out and show login.
+  useEffect(() => {
+    apiService.setSessionExpiredHandler(() => {
+      console.log('[AuthContext] Session expired (401) - signing out');
+      setUser(null);
+      setSessionExpired(true);
+      authService.logout();
+    });
+    return () => apiService.setSessionExpiredHandler(null);
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -131,6 +146,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response?.user) {
         console.log('[AuthContext] Setting user:', response.user.id);
         setUser(response.user);
+        setSessionExpired(false);
         registerPushToken(); // fire-and-forget
       } else {
         console.warn('[AuthContext] No user in response');
@@ -150,6 +166,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response?.user) {
         console.log('[AuthContext] Setting user:', response.user.id);
         setUser(response.user);
+        setSessionExpired(false);
         registerPushToken(); // fire-and-forget
       } else {
         console.warn('[AuthContext] No user in response');
@@ -189,6 +206,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signup,
         logout,
         refreshUser,
+        sessionExpired,
       }}
     >
       {children}

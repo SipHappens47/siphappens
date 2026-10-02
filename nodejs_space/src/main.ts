@@ -1,15 +1,21 @@
 // Must be imported before anything else so Sentry can instrument the app.
 import './instrument';
 import { NestFactory, HttpAdapterHost } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { Request, Response, NextFunction } from 'express';
 import * as express from 'express';
 import { SentryFilter } from './sentry.filter';
+import { trustProxySetting } from './lib/trust-proxy';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Behind Render's proxy: take the client IP from X-Forwarded-For so the
+  // per-IP rate limits apply per client rather than to everyone at once.
+  app.set('trust proxy', trustProxySetting());
 
   // Report unhandled 5xx errors to Sentry (no-op until SENTRY_DSN is set).
   const { httpAdapter } = app.get(HttpAdapterHost);

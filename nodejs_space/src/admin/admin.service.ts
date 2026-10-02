@@ -1,9 +1,21 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// SipHappens brand account = admin. Reserved at signup (see AuthService).
+export const ADMIN_EMAIL = 'official@siphappens.com';
+
+// Self-registration with the admin email is refused unless this env flag is
+// 'true', so nobody can claim admin by signing up first. Existing accounts are unaffected.
+export function isReservedAdminSignup(email: string | undefined): boolean {
+  return (
+    (email ?? '').trim().toLowerCase() === ADMIN_EMAIL &&
+    process.env.ALLOW_ADMIN_SIGNUP !== 'true'
+  );
+}
+
 @Injectable()
 export class AdminService {
-  private readonly ADMIN_EMAIL = 'official@siphappens.com'; // SipHappens brand account = admin
+  private readonly ADMIN_EMAIL = ADMIN_EMAIL;
 
   constructor(private prisma: PrismaService) {}
 

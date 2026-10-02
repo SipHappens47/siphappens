@@ -12,6 +12,9 @@ import { DiscoverDistilleriesContent } from '../../src/components/DiscoverDistil
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLoadSection } from '../../src/hooks/useLoadSection';
+import { LoadNotice } from '../../src/components/LoadNotice';
+import { SlowServerNotice } from '../../src/components/SlowServerNotice';
 import { useAuth } from '../../src/context/AuthContext';
 
 export default function TheBarScreen() {
@@ -20,40 +23,26 @@ export default function TheBarScreen() {
   const [activeTab, setActiveTab] = useState<'sippers' | 'distilleries'>(
     params?.tab === 'distilleries' ? 'distilleries' : 'sippers',
   );
-  const [pours, setPours] = useState<BarPour[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const feed = useLoadSection<BarPour[]>(user?.id ?? null);
+  const pours = feed.data ?? [];
+  const setPours = feed.setData;
+  const loading = feed.loading;
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [feedError, setFeedError] = useState<'auth' | 'network' | null>(null);
+  const feedError = feed.error;
   const router = useRouter();
-  const { logout } = useAuth();
+
 
   const loadBarFeed = async () => {
-    try {
-      setLoading(true);
-      setFeedError(null);
-      const data = await apiService.getBarFeed();
-      setPours(data ?? []);
-    } catch (error: any) {
-      console.error('Failed to load The Bar feed:', error?.message ?? error);
-      if (error?.response?.status === 401) {
-        setFeedError('auth');
-      } else {
-        setFeedError('network');
-        const message = error?.response?.data?.message ?? 'Failed to load The Bar feed. Please try again.';
-        setTimeout(() => Alert.alert('Error', message), 100);
-      }
-      setPours([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    await feed.load(() => apiService.getBarFeed());
+    setRefreshing(false);
   };
 
   useFocusEffect(
     useCallback(() => {
       loadBarFeed();
-    }, [])
+    }, [user?.id])
   );
 
   const handleRefresh = () => {
@@ -106,22 +95,13 @@ export default function TheBarScreen() {
     router.push(`/pour/${pourId}`);
   };
 
-  const handleLoginCta = async () => {
-    await logout();
-    router.replace('/auth/login');
-  };
-
   const renderEmpty = () => {
-    if (loading) return null;
-    if (feedError === 'auth') {
+    if (feedError || feed.data === undefined) {
       return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Failed to load The Bar feed</Text>
-          <Text style={styles.emptyText}>Please try again.</Text>
-          <Pressable style={styles.connectButton} onPress={handleLoginCta}>
-            <Text style={styles.connectButtonText}>Log In</Text>
-          </Pressable>
-        </View>
+        <>
+          <LoadNotice name="The Bar feed" section={{ ...feed, retry: loadBarFeed }} />
+          <SlowServerNotice active={feed.loading && feed.data === undefined} />
+        </>
       );
     }
     return (
@@ -234,6 +214,7 @@ export default function TheBarScreen() {
               />
             )}
             contentContainerStyle={styles.listContent}
+            ListHeaderComponent={pours.length > 0 ? <LoadNotice name="The Bar feed" section={{ ...feed, retry: loadBarFeed }} /> : null}
             ListEmptyComponent={renderEmpty}
             ListFooterComponent={renderGettingStarted}
             refreshControl={

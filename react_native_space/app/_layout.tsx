@@ -61,7 +61,7 @@ function SeoHead() {
 }
 
 function RootNavigator() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, sessionExpired } = useAuth();
   const segments = useSegments();
 
   if (loading) {
@@ -72,7 +72,7 @@ function RootNavigator() {
 
   return (
     <>
-      {!isAuthenticated && !allowPublic ? <Redirect href="/auth/welcome" /> : null}
+      {!isAuthenticated && !allowPublic ? <Redirect href={sessionExpired ? '/auth/login' : '/auth/welcome'} /> : null}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="auth" />

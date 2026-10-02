@@ -12,14 +12,14 @@ export class ConnectionsController {
   constructor(private connectionsService: ConnectionsService) {}
 
   @Get('search')
-  @ApiOperation({ summary: 'Search users by name or email' })
+  @ApiOperation({ summary: 'Search users by name' })
   @ApiResponse({ status: 200, description: 'List of users matching search query' })
   async searchUsers(@Request() req: any, @Query('query') query: string) {
     return this.connectionsService.searchUsers(req.user.userId, query);
   }
 
   @Post('send')
-  @ApiOperation({ summary: 'Send a connection request to another user by name or email' })
+  @ApiOperation({ summary: 'Send a connection request to another user by exact name' })
   @ApiResponse({ status: 201, description: 'Connection request sent' })
   async sendRequest(@Request() req: any, @Body() dto: SendConnectionRequestDto) {
     return this.connectionsService.sendConnectionRequest(req.user.userId, dto.receiverEmail);

@@ -1,10 +1,16 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { sendEmail } from '../lib/email';
+import { isReservedAdminSignup } from '../admin/admin.service';
+import { isBannedEmail } from '../moderation/banned-emails';
+
+const DISTILLERY_ALREADY_CLAIMED =
+  'This distillery has already been claimed. Contact SipHappens support if you manage it.';
 
 @Injectable()
 export class AuthService {
@@ -20,9 +26,37 @@ export class AuthService {
       throw new BadRequestException('Age verification is required');
     }
 
+    if (isReservedAdminSignup(email)) {
+      throw new BadRequestException('This email address is reserved');
+    }
+
+    if (await isBannedEmail(this.prisma, email)) {
+      throw new BadRequestException(
+        "This email address can't be used to create an account. Contact SipHappens support if you think this is a mistake.",
+      );
+    }
+
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new BadRequestException('Email already in use');
+    }
+
+    // A distillery that already has an owner cannot be re-claimed through
+    // signup: that would displace the owner and reset its verification.
+    // Checked before the account is created so a refused claim leaves nothing behind.
+    let existingDistillery: any = null;
+    if (isDistilleryAccount && distilleryData) {
+      existingDistillery = await this.prisma.distillery.findFirst({
+        where: {
+          name: {
+            equals: distilleryData.distilleryName,
+            mode: 'insensitive',
+          },
+        },
+      });
+      if (existingDistillery?.owneruserid) {
+        throw new BadRequestException(DISTILLERY_ALREADY_CLAIMED);
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -58,20 +92,11 @@ export class AuthService {
     // Handle distillery account signup
     let distillery: any = null;
     if (isDistilleryAccount && distilleryData) {
-      // Check for existing distillery with exact same name (case-insensitive)
-      const existingDistillery = await this.prisma.distillery.findFirst({
-        where: {
-          name: {
-            equals: distilleryData.distilleryName,
-            mode: 'insensitive',
-          },
-        },
-      });
-
       if (existingDistillery) {
-        // Link to existing distillery
-        distillery = await this.prisma.distillery.update({
-          where: { id: existingDistillery.id },
+        // Link to an existing, unowned (seeded) distillery. The claim is one
+        // conditional UPDATE, so of two parallel signups only one can win.
+        const claimed = await this.prisma.distillery.updateMany({
+          where: { id: existingDistillery.id, owneruserid: null },
           data: {
             owneruserid: user.id,
             verified: false, // Pending verification by admin
@@ -85,6 +110,12 @@ export class AuthService {
             ...(distilleryData.spiritTypes && { spirittypes: distilleryData.spiritTypes.trim() }),
           },
         });
+        if (claimed.count !== 1) {
+          // Someone else claimed it since the check above: undo this signup.
+          await this.prisma.user.delete({ where: { id: user.id } });
+          throw new BadRequestException(DISTILLERY_ALREADY_CLAIMED);
+        }
+        distillery = await this.prisma.distillery.findUnique({ where: { id: existingDistillery.id } });
       } else {
         // Create new distillery - pending verification
         distillery = await this.prisma.distillery.create({
@@ -244,7 +275,9 @@ export class AuthService {
     if (distilleryId) {
       payload.distilleryId = distilleryId;
     }
-    return this.jwtService.sign(payload, { expiresIn: '3650d' });
+    // 30 days (was 10 years). The app signs out on a 401 at its startup
+    // session check; logout-all and password reset still revoke earlier.
+    return this.jwtService.sign(payload, { expiresIn: '30d' });
   }
 
   // Invalidate every existing token for a user (logout-everywhere). Bumping the
@@ -263,7 +296,7 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (user) {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = randomInt(100000, 1000000).toString(); // CSPRNG, 6 digits
       const codeHash = await bcrypt.hash(code, 10);
       const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 

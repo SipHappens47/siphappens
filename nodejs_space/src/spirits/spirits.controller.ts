@@ -2,6 +2,7 @@ import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Request } fr
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SpiritsService } from './spirits.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminService } from '../admin/admin.service';
 import { RecognizeBottleDto } from './dto/recognize-bottle.dto';
 import { CreateSpiritDto } from './dto/create-spirit.dto';
 import { UpdateSpiritDto } from './dto/update-spirit.dto';
@@ -10,7 +11,10 @@ import { CreateDistilleryDto } from './dto/create-distillery.dto';
 @ApiTags('Spirits')
 @Controller('api/spirits')
 export class SpiritsController {
-  constructor(private spiritsService: SpiritsService) {}
+  constructor(
+    private spiritsService: SpiritsService,
+    private adminService: AdminService,
+  ) {}
 
   @Post('recognize')
   @UseGuards(JwtAuthGuard)
@@ -88,10 +92,14 @@ export class SpiritsController {
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update spirit details' })
+  @ApiOperation({ summary: 'Update spirit details (Admin only)' })
   @ApiResponse({ status: 200, description: 'Spirit updated successfully' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
   @ApiResponse({ status: 404, description: 'Spirit not found' })
-  async updateSpirit(@Param('id') id: string, @Body() dto: UpdateSpiritDto) {
+  async updateSpirit(@Param('id') id: string, @Body() dto: UpdateSpiritDto, @Request() req: any) {
+    // Shared catalogue entry: admin only. Distillery owners edit their own
+    // spirits through PUT /api/distilleries/:id/shelf/spirits/:spiritId.
+    await this.adminService.checkAdminAccess(req.user.userId);
     return this.spiritsService.updateSpirit(id, dto);
   }
 }

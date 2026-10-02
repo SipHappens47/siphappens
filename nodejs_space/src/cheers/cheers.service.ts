@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectionsService } from '../connections/connections.service';
 import { sendPushNotification } from '../lib/push-notifications';
+import { assertNotBlocked, getHiddenUserIds } from '../moderation/blocking';
 
 @Injectable()
 export class CheersService {
@@ -12,10 +13,11 @@ export class CheersService {
 
   // Recent cheers other users gave on my pours (for in-app notifications)
   async getReceivedCheers(userId: string) {
+    const hiddenUserIds = await getHiddenUserIds(this.prisma, userId);
     const cheers = await this.prisma.cheer.findMany({
       where: {
         pour: { userid: userId },
-        userid: { not: userId },
+        userid: { not: userId, notIn: hiddenUserIds },
       },
       include: {
         user: { select: { id: true, name: true, profilephoto: true } },
@@ -54,6 +56,8 @@ export class CheersService {
     if (!pour) {
       throw new NotFoundException('Pour not found');
     }
+
+    await assertNotBlocked(this.prisma, userId, pour.userid, 'Pour not found');
 
     if (!pour.isshared) {
       throw new ForbiddenException('Cannot cheer a private pour');
