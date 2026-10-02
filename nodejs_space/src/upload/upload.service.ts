@@ -1,6 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as s3 from '../lib/s3';
+import {
+  buildUserStoragePath,
+  canDeleteStorageObject,
+  isOwnedStoragePath,
+  isPublicStoragePath,
+  isTrustedFileRecord,
+} from './storage-ownership';
 import { PresignedUploadDto } from './dto/presigned-upload.dto';
 import { CompleteUploadDto } from './dto/complete-upload.dto';
 import { InitiateMultipartDto } from './dto/initiate-multipart.dto';
@@ -9,7 +16,17 @@ import { CompleteMultipartDto } from './dto/complete-multipart.dto';
 
 @Injectable()
 export class UploadService {
+  private readonly logger = new Logger(UploadService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  // SH-C03: a caller may only register objects in its own namespace, and
+  // each object only once.
+  private assertOwnedPath(userId: string, cloud_storage_path: string) {
+    if (!isOwnedStoragePath(userId, cloud_storage_path)) {
+      throw new ForbiddenException('Upload path was not issued to this account');
+    }
+  }
 
   async generatePresignedUrl(userId: string, dto: PresignedUploadDto) {
     console.log('Backend: generatePresignedUrl called for user:', userId, 'dto:', dto);
@@ -17,9 +34,8 @@ export class UploadService {
 
     try {
       const { uploadUrl, cloud_storage_path } = await s3.generatePresignedUploadUrl(
-        fileName,
+        buildUserStoragePath(userId, fileName, isPublic ? 'public' : 'private'),
         contentType,
-        isPublic,
       );
 
       console.log('Backend: Presigned URL generated successfully:', { cloud_storage_path, hasUploadUrl: !!uploadUrl });
@@ -38,7 +54,16 @@ export class UploadService {
   async completeUpload(userId: string, dto: CompleteUploadDto) {
     const { cloud_storage_path, fileName, mimeType, fileSize } = dto;
 
-    const isPublic = cloud_storage_path.includes('public/uploads/');
+    this.assertOwnedPath(userId, cloud_storage_path);
+    const existing = await this.prisma.file.findFirst({
+      where: { cloudstoragepath: cloud_storage_path },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('This upload has already been completed');
+    }
+
+    const isPublic = isPublicStoragePath(cloud_storage_path);
 
     const file = await this.prisma.file.create({
       data: {
@@ -73,6 +98,7 @@ export class UploadService {
 
   async getPartUrl(userId: string, dto: GetPartUrlDto) {
     const { cloud_storage_path, uploadId, partNumber } = dto;
+    this.assertOwnedPath(userId, cloud_storage_path);
 
     const presignedUrl = await s3.getPresignedUrlForPart(cloud_storage_path, uploadId, partNumber);
 
@@ -84,10 +110,11 @@ export class UploadService {
 
   async completeMultipart(userId: string, dto: CompleteMultipartDto) {
     const { cloud_storage_path, uploadId, parts, fileName, mimeType, fileSize } = dto;
+    this.assertOwnedPath(userId, cloud_storage_path);
 
     await s3.completeMultipartUpload(cloud_storage_path, uploadId, parts);
 
-    const isPublic = cloud_storage_path.includes('public/uploads/');
+    const isPublic = isPublicStoragePath(cloud_storage_path);
 
     const file = await this.prisma.file.create({
       data: {
@@ -118,6 +145,11 @@ export class UploadService {
 
     if (!file) {
       throw new NotFoundException('File not found');
+    }
+
+    // A record registered against someone else's object grants nothing.
+    if (!(await isTrustedFileRecord(this.prisma, file))) {
+      throw new ForbiddenException('Access denied');
     }
 
     // Allow access if:
@@ -153,7 +185,11 @@ export class UploadService {
       throw new ForbiddenException('Access denied');
     }
 
-    await s3.deleteFile(file.cloudstoragepath);
+    if (await canDeleteStorageObject(this.prisma, file)) {
+      await s3.deleteFile(file.cloudstoragepath);
+    } else {
+      this.logger.warn(`Kept storage object for file ${file.id}: ownership not provable`);
+    }
     await this.prisma.file.delete({ where: { id: fileId } });
 
     return { message: 'File deleted successfully' };

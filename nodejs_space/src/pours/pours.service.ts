@@ -13,8 +13,23 @@ export class PoursService {
     private profileService: ProfileService,
   ) {}
 
+  // SH-C03: a pour may only attach an image file the caller uploaded.
+  private async assertOwnImage(userId: string, fileId: string) {
+    const file = await this.prisma.file.findUnique({
+      where: { id: fileId },
+      select: { userid: true },
+    });
+    if (!file || file.userid !== userId) {
+      throw new ForbiddenException('Image not found');
+    }
+  }
+
   async createPour(userId: string, dto: CreatePourDto) {
     const { flavorTagIds, ...pourData } = dto;
+
+    if (dto.image) {
+      await this.assertOwnImage(userId, dto.image);
+    }
 
     const pour = await this.prisma.pour.create({
       data: {
@@ -174,6 +189,10 @@ export class PoursService {
     }
 
     const { flavorTagIds, ...pourData } = dto;
+
+    if (pourData.image && pourData.image !== existingPour.image) {
+      await this.assertOwnImage(userId, pourData.image);
+    }
 
     if (flavorTagIds !== undefined) {
       await this.prisma.pourflavortag.deleteMany({

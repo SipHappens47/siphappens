@@ -4,6 +4,7 @@ import { AdminService } from '../admin/admin.service';
 import { ReportDto } from './dto/report.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
 import * as s3 from '../lib/s3';
+import { canDeleteStorageObject } from '../upload/storage-ownership';
 
 @Injectable()
 export class ModerationService {
@@ -116,10 +117,15 @@ export class ModerationService {
   private async deleteUserAndStorage(userId: string) {
     const files = await this.prisma.file.findMany({
       where: { userid: userId },
-      select: { cloudstoragepath: true },
+      select: { id: true, userid: true, cloudstoragepath: true },
     });
     for (const file of files) {
       try {
+        // SH-C03/W04: never delete an object this account cannot prove it owns.
+        if (!(await canDeleteStorageObject(this.prisma, file))) {
+          this.logger.warn(`Kept storage object for file ${file.id}: ownership not provable`);
+          continue;
+        }
         await s3.deleteFile(file.cloudstoragepath);
       } catch (err: any) {
         this.logger.warn(`Failed to delete storage object ${file.cloudstoragepath}: ${err?.message}`);

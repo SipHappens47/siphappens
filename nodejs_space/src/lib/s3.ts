@@ -15,18 +15,13 @@ const authHeaders = () => ({
   Authorization: `Bearer ${SUPABASE_KEY}`,
   apikey: SUPABASE_KEY,
 });
-const sanitize = (name: string) => (name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
-const randomId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-
+// The caller (UploadService) generates the owner-namespaced path; see
+// upload/storage-ownership.ts.
 export async function generatePresignedUploadUrl(
-  fileName: string,
+  cloud_storage_path: string,
   _contentType: string,
-  isPublic = false,
 ): Promise<{ uploadUrl: string; cloud_storage_path: string }> {
   assertConfig();
-  const prefix = isPublic ? 'public/uploads/' : 'private/uploads/';
-  const cloud_storage_path = `${prefix}${randomId()}-${sanitize(fileName)}`;
-
   const res = await fetch(
     `${SUPABASE_URL}/storage/v1/object/upload/sign/${BUCKET}/${cloud_storage_path}`,
     { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: '{}' },
