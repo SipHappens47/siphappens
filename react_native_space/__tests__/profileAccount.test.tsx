@@ -57,3 +57,11 @@ describe('hidden seed dialog', () => {
     expect(view.getByText('Auto Import (CT + Iowa)')).toBeTruthy();
   });
 });
+
+describe('account controls on My Profile (N5)', () => {
+  it('has a visible Account & settings entry that opens the account section', async () => {
+    const view = await renderProfile();
+    fireEvent.press(view.getByText('Account & settings'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/profile/edit', params: { section: 'account' } });
+  });
+});

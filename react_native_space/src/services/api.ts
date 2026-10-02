@@ -682,6 +682,11 @@ class ApiService {
     return (response?.data as any) ?? { success: true };
   }
 
+  async getBlockedUsers(): Promise<Array<{ id: string; name: string; blockedAt: string }>> {
+    const response = await this.client.get(new URL('/api/moderation/blocks/users', API_URL).toString());
+    return (response?.data as any) ?? [];
+  }
+
   async getBlockedUserIds(): Promise<string[]> {
     const response = await this.client.get(new URL('/api/moderation/blocks', API_URL).toString());
     return (response?.data as any) ?? [];

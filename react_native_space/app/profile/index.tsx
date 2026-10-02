@@ -303,6 +303,15 @@ export default function ProfileScreen() {
           <JourneyMapSection tasteSummary={tasteSummary} badges={badges} />
         )}
 
+        <Button
+          mode="outlined"
+          icon="cog-outline"
+          onPress={() => router.push({ pathname: '/profile/edit', params: { section: 'account' } })}
+          style={styles.accountButton}
+        >
+          Account & settings
+        </Button>
+
         {/* Hidden Version Number (Tap 7 times to reveal admin) */}
         <Pressable onPress={handleVersionTap} style={styles.versionContainer}>
           <Text style={styles.versionText}>v1.0.1</Text>
@@ -470,6 +479,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textMuted,
     marginTop: 4,
+  },
+  accountButton: {
+    marginTop: spacing.md,
+    borderRadius: 12,
   },
   versionContainer: {
     alignItems: 'center',
