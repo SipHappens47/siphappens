@@ -10,6 +10,7 @@ import { SESSION_EXPIRED_MESSAGE } from '../../src/services/api';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
 import { Heading } from '../../src/components/semantics';
+import { SlowServerNotice } from '../../src/components/SlowServerNotice';
 
 const EMAIL_FIELD_ID = 'login-email';
 const PASSWORD_FIELD_ID = 'login-password';
@@ -205,6 +206,7 @@ export default function LoginScreen() {
             >
               Log In
             </Button>
+            <SlowServerNotice active={loading} />
 
             <Button
               mode="text"

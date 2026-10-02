@@ -9,6 +9,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { uploadService } from '../../src/services/upload';
 import { Colors } from '../../src/constants/colors';
 import { spacing } from '../../src/constants/theme';
+import { SlowServerNotice } from '../../src/components/SlowServerNotice';
 
 type AccountType = 'sipper' | 'distillery' | null;
 
@@ -430,6 +431,7 @@ export default function SignupScreen() {
               >
                 {accountType === 'distillery' ? 'Register Distillery' : 'Sign Up'}
               </Button>
+              <SlowServerNotice active={loading} />
 
               <Text style={styles.agreementText}>
                 By signing up you agree to our{' '}

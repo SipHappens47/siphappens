@@ -14,6 +14,7 @@ import { spacing } from '../../src/constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useLoadSection } from '../../src/hooks/useLoadSection';
 import { LoadNotice } from '../../src/components/LoadNotice';
+import { SlowServerNotice } from '../../src/components/SlowServerNotice';
 import { useAuth } from '../../src/context/AuthContext';
 
 export default function TheBarScreen() {
@@ -95,7 +96,14 @@ export default function TheBarScreen() {
   };
 
   const renderEmpty = () => {
-    if (feedError || feed.data === undefined) return <LoadNotice name="The Bar feed" section={{ ...feed, retry: loadBarFeed }} />;
+    if (feedError || feed.data === undefined) {
+      return (
+        <>
+          <LoadNotice name="The Bar feed" section={{ ...feed, retry: loadBarFeed }} />
+          <SlowServerNotice active={feed.loading && feed.data === undefined} />
+        </>
+      );
+    }
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyTitle}>The Bar is quiet</Text>
